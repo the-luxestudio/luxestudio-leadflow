@@ -1,0 +1,389 @@
+// Prisma Schema for LuxeStudio LeadFlow CRM (Production PostgreSQL)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  timezone  String   @default("Asia/Kolkata")
+  currency  String   @default("INR")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  memberships       Membership[]
+  pipelineStages    PipelineStage[]
+  leads             Lead[]
+  leadContacts      LeadContact[]
+  leadNotes         LeadNote[]
+  leadActivities    LeadActivity[]
+  deals             Deal[]
+  followUps         FollowUp[]
+  sequences         FollowUpSequence[]
+  enrollments       SequenceEnrollment[]
+  messageTemplates  MessageTemplate[]
+  userIntegrations  UserIntegration[]
+  notificationJobs  NotificationJob[]
+  importJobs        LeadImportJob[]
+  auditLogs         AuditLog[]
+
+  @@map("organizations")
+}
+
+model User {
+  id                    String    @id @default(uuid())
+  email                 String    @unique
+  passwordHash          String    @map("password_hash")
+  displayName           String    @map("display_name")
+  status                String    @default("ACTIVE") // ACTIVE, INACTIVE, INVITED
+  telegramChatId        String?   @map("telegram_chat_id")
+  telegramUsername      String?   @map("telegram_username")
+  linkingToken          String?   @unique @map("linking_token")
+  linkingTokenExpiresAt DateTime? @map("linking_token_expires_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  memberships      Membership[]
+  assignedLeads    Lead[]            @relation("LeadOwner")
+  createdLeads     Lead[]            @relation("LeadCreator")
+  authoredNotes    LeadNote[]        @relation("NoteAuthor")
+  activities       LeadActivity[]    @relation("ActivityActor")
+  assignedFollowUps FollowUp[]       @relation("FollowUpOwner")
+  createdFollowUps FollowUp[]        @relation("FollowUpCreator")
+  integrations     UserIntegration[]
+
+  @@map("users")
+}
+
+model Membership {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  userId         String   @map("user_id")
+  role           String   @default("SALES_MEMBER") // ADMIN, MANAGER, SALES_MEMBER
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([userId])
+  @@map("memberships")
+}
+
+model PipelineStage {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  name           String
+  position       Int
+  isWon          Boolean  @default(false) @map("is_won")
+  isLost         Boolean  @default(false) @map("is_lost")
+  active         Boolean  @default(true)
+  color          String?  @default("#6B7280")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  leads        Lead[]
+
+  @@index([organizationId, position])
+  @@map("pipeline_stages")
+}
+
+model Lead {
+  id               String    @id @default(uuid())
+  organizationId   String    @map("organization_id")
+  businessName     String    @map("business_name")
+  category         String?
+  websiteUrl       String?   @map("website_url")
+  socialUrl        String?   @map("social_url")
+  address          String?
+  city             String?
+  state            String?
+  country          String?   @default("India")
+  mapsUrl          String?   @map("maps_url")
+  source           String?
+  sourceUrl        String?   @map("source_url")
+  origin           String    @default("MANUAL")
+  stageId          String    @map("stage_id")
+  ownerId          String?   @map("owner_id")
+  priority         String    @default("MEDIUM")
+  opportunityType  String?   @map("opportunity_type")
+  prototypeUrl     String?   @map("prototype_url")
+  proposalUrl      String?   @map("proposal_url")
+  dealValue        Int?      @default(0) @map("deal_value")
+  currency         String    @default("INR")
+  lastContactedAt  DateTime? @map("last_contacted_at")
+  archivedAt       DateTime? @map("archived_at")
+  createdBy        String?   @map("created_by")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  stage        PipelineStage      @relation(fields: [stageId], references: [id])
+  owner        User?              @relation("LeadOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  creator      User?              @relation("LeadCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+  contacts     LeadContact[]
+  notes        LeadNote[]
+  activities   LeadActivity[]
+  deals        Deal[]
+  followUps    FollowUp[]
+  enrollments  SequenceEnrollment[]
+
+  @@index([organizationId, stageId])
+  @@index([organizationId, ownerId])
+  @@index([organizationId, businessName])
+  @@index([organizationId, priority])
+  @@index([organizationId, createdAt])
+  @@map("leads")
+}
+
+model LeadContact {
+  id              String   @id @default(uuid())
+  organizationId  String   @map("organization_id")
+  leadId          String   @map("lead_id")
+  name            String
+  phone           String?
+  normalizedPhone String?  @map("normalized_phone")
+  whatsappPhone   String?  @map("whatsapp_phone")
+  email           String?
+  isPrimary       Boolean  @default(true) @map("is_primary")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lead         Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, phone])
+  @@index([organizationId, email])
+  @@index([leadId])
+  @@map("lead_contacts")
+}
+
+model LeadNote {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  leadId         String   @map("lead_id")
+  authorId       String   @map("author_id")
+  content        String
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lead         Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  author       User         @relation("NoteAuthor", fields: [authorId], references: [id])
+
+  @@index([organizationId, leadId])
+  @@map("lead_notes")
+}
+
+model LeadActivity {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  leadId         String   @map("lead_id")
+  actorId        String   @map("actor_id")
+  type           String
+  outcome        String?
+  summary        String
+  details        String?
+  occurredAt     DateTime @default(now()) @map("occurred_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lead         Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  actor        User         @relation("ActivityActor", fields: [actorId], references: [id])
+
+  @@index([organizationId, leadId, occurredAt])
+  @@map("lead_activities")
+}
+
+model Deal {
+  id              String    @id @default(uuid())
+  organizationId  String    @map("organization_id")
+  leadId          String    @map("lead_id")
+  title           String
+  amount          Int       @default(0)
+  currency        String    @default("INR")
+  probability     Int       @default(50)
+  status          String    @default("OPEN")
+  lostReason      String?   @map("lost_reason")
+  expectedCloseAt DateTime? @map("expected_close_at")
+  closedAt        DateTime? @map("closed_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lead         Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status])
+  @@index([leadId])
+  @@map("deals")
+}
+
+model FollowUp {
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+  leadId         String    @map("lead_id")
+  ownerId        String    @map("owner_id")
+  createdBy      String    @map("created_by")
+  actionType     String    @default("CALL") @map("action_type")
+  title          String
+  plannedMessage String?   @map("planned_message")
+  dueAt          DateTime  @map("due_at")
+  timezone       String    @default("Asia/Kolkata")
+  status         String    @default("SCHEDULED")
+  outcome        String?
+  completedAt    DateTime? @map("completed_at")
+  cancelledAt    DateTime? @map("cancelled_at")
+  snoozedUntil   DateTime? @map("snoozed_until")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lead             Lead              @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  owner            User              @relation("FollowUpOwner", fields: [ownerId], references: [id])
+  creator          User              @relation("FollowUpCreator", fields: [createdBy], references: [id])
+  notificationJobs NotificationJob[]
+
+  @@index([organizationId, ownerId, status, dueAt])
+  @@index([leadId])
+  @@map("follow_ups")
+}
+
+model FollowUpSequence {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  name           String
+  triggerStage   String?  @map("trigger_stage")
+  steps          String
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  enrollments  SequenceEnrollment[]
+
+  @@map("follow_up_sequences")
+}
+
+model SequenceEnrollment {
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+  leadId         String    @map("lead_id")
+  sequenceId     String    @map("sequence_id")
+  currentStep    Int       @default(0) @map("current_step")
+  nextStepAt     DateTime? @map("next_step_at")
+  status         String    @default("ACTIVE")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lead         Lead             @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  sequence     FollowUpSequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status, nextStepAt])
+  @@index([leadId])
+  @@map("sequence_enrollments")
+}
+
+model MessageTemplate {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  name           String
+  category       String   @default("OUTREACH")
+  channel        String   @default("WHATSAPP")
+  subject        String?
+  body           String
+  active         Boolean  @default(true)
+  createdBy      String   @map("created_by")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, category])
+  @@map("message_templates")
+}
+
+model UserIntegration {
+  id                String    @id @default(uuid())
+  organizationId    String    @map("organization_id")
+  userId            String    @map("user_id")
+  provider          String
+  externalAccountId String?   @map("external_account_id")
+  status            String    @default("ACTIVE")
+  metadata          String?
+  linkedAt          DateTime  @default(now()) @map("linked_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId, provider])
+  @@map("user_integrations")
+}
+
+model NotificationJob {
+  id              String    @id @default(uuid())
+  organizationId  String    @map("organization_id")
+  followUpId      String    @map("follow_up_id")
+  recipientUserId String    @map("recipient_user_id")
+  channel         String    @default("TELEGRAM")
+  scheduledAt     DateTime  @map("scheduled_at")
+  status          String    @default("PENDING")
+  idempotencyKey  String    @unique @map("idempotency_key")
+  attempts        Int       @default(0)
+  nextAttemptAt   DateTime? @map("next_attempt_at")
+  sentAt          DateTime? @map("sent_at")
+  lastError       String?   @map("last_error")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  followUp     FollowUp     @relation(fields: [followUpId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status, scheduledAt])
+  @@map("notification_jobs")
+}
+
+model LeadImportJob {
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+  createdBy      String    @map("created_by")
+  status         String    @default("COMPLETED")
+  totalRows      Int       @default(0) @map("total_rows")
+  successCount   Int       @default(0) @map("success_count")
+  skippedCount   Int       @default(0) @map("skipped_count")
+  errorCount     Int       @default(0) @map("error_count")
+  errorReport    String?   @map("error_report")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  completedAt    DateTime? @map("completed_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("lead_import_jobs")
+}
+
+model AuditLog {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  actorId        String?  @map("actor_id")
+  entityType     String   @map("entity_type")
+  entityId       String   @map("entity_id")
+  action         String
+  metadata       String?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, entityType, entityId])
+  @@index([organizationId, createdAt])
+  @@map("audit_logs")
+}
