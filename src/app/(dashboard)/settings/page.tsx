@@ -30,6 +30,13 @@ export default function SettingsPage() {
   const [generatingToken, setGeneratingToken] = useState(false);
   const [unlinkingTelegram, setUnlinkingTelegram] = useState(false);
   const [copiedToken, setCopiedToken] = useState(false);
+  const [sendingTestTelegram, setSendingTestTelegram] = useState(false);
+  const [telegramTestSuccess, setTelegramTestSuccess] = useState<string | null>(null);
+  const [telegramTestError, setTelegramTestError] = useState<string | null>(null);
+  const [directChatId, setDirectChatId] = useState('');
+  const [linkingDirect, setLinkingDirect] = useState(false);
+  const [directLinkError, setDirectLinkError] = useState<string | null>(null);
+  const [directLinkSuccess, setDirectLinkSuccess] = useState<string | null>(null);
 
   // Background Cron Worker test
   const [runningCron, setRunningCron] = useState(false);
@@ -47,6 +54,75 @@ export default function SettingsPage() {
   const [sendingTestEmail, setSendingTestEmail] = useState(false);
   const [emailTestSuccess, setEmailTestSuccess] = useState<string | null>(null);
   const [emailTestError, setEmailTestError] = useState<string | null>(null);
+
+  // Auto-poll user status while waiting for Telegram link
+  useEffect(() => {
+    if (!telegramToken || currentUser?.telegramChatId) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (res.ok) {
+          const json = await res.json();
+          if (json.user?.telegramChatId) {
+            setCurrentUser(json.user);
+            setTelegramToken(null);
+            setTelegramTestSuccess('🎉 Telegram account connected successfully!');
+          }
+        }
+      } catch (e) {
+        // silent
+      }
+    }, 2500);
+
+    return () => clearInterval(interval);
+  }, [telegramToken, currentUser?.telegramChatId]);
+
+  const handleSendTestTelegram = async () => {
+    setTelegramTestSuccess(null);
+    setTelegramTestError(null);
+    try {
+      setSendingTestTelegram(true);
+      const res = await fetch('/api/telegram/test', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) {
+        setTelegramTestError(data.error || 'Failed to send Telegram test alert');
+      } else {
+        setTelegramTestSuccess(data.message || 'Test alert delivered to Telegram!');
+      }
+    } catch {
+      setTelegramTestError('Network error while requesting Telegram test alert');
+    } finally {
+      setSendingTestTelegram(false);
+    }
+  };
+
+  const handleDirectLinkChatId = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!directChatId.trim()) return;
+    setDirectLinkError(null);
+    setDirectLinkSuccess(null);
+    try {
+      setLinkingDirect(true);
+      const res = await fetch('/api/telegram/link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chatId: directChatId.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setDirectLinkError(data.error || 'Failed to link Chat ID');
+      } else {
+        setDirectLinkSuccess('Telegram account connected successfully!');
+        setDirectChatId('');
+        fetchUserData();
+      }
+    } catch {
+      setDirectLinkError('Network error while linking Chat ID');
+    } finally {
+      setLinkingDirect(false);
+    }
+  };
 
   const handleSendTestEmail = async () => {
     setEmailTestSuccess(null);
@@ -214,7 +290,7 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div>
+          <div className="flex items-center gap-2">
             {currentUser?.telegramChatId ? (
               <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5" /> Connected
@@ -224,65 +300,122 @@ export default function SettingsPage() {
                 <AlertCircle className="w-3.5 h-3.5" /> Disconnected
               </span>
             )}
-          </div>
-        </div>
-
-        {currentUser?.telegramChatId ? (
-          <div className="p-4 rounded-xl bg-charcoal-50 border border-charcoal-200 space-y-3">
-            <div className="text-xs text-charcoal-700">
-              <span className="font-semibold">Linked Telegram Chat:</span> {currentUser.telegramChatId}{' '}
-              {currentUser.telegramUsername && <span>(@{currentUser.telegramUsername})</span>}
-            </div>
-            <p className="text-[11px] text-charcoal-500">
-              Your account is actively receiving personal reminders in accordance with your follow-up schedules.
-            </p>
             <Button
               variant="outline"
               size="sm"
-              onClick={handleUnlinkTelegram}
-              isLoading={unlinkingTelegram}
-              className="text-rose-600 hover:bg-rose-50 border-rose-200"
+              onClick={fetchUserData}
+              title="Refresh connection status"
+              className="text-xs text-charcoal-600"
             >
-              Unlink Telegram Account
+              <RefreshCw className="w-3.5 h-3.5" />
             </Button>
           </div>
-        ) : (
-          <div className="space-y-4 pt-2">
-            {!telegramToken ? (
-              <div>
+        </div>
+
+        {telegramTestSuccess && (
+          <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+            <span>{telegramTestSuccess}</span>
+          </div>
+        )}
+
+        {telegramTestError && (
+          <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+            <span>{telegramTestError}</span>
+          </div>
+        )}
+
+        {currentUser?.telegramChatId ? (
+          <div className="p-4 rounded-xl bg-charcoal-50 border border-charcoal-200 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="text-xs text-charcoal-700 space-y-1">
+                <div>
+                  <span className="font-semibold text-charcoal-900">Linked Telegram Chat ID:</span>{' '}
+                  <span className="font-mono bg-white px-2 py-0.5 rounded border border-charcoal-300 font-bold">{currentUser.telegramChatId}</span>
+                </div>
+                {currentUser.telegramUsername && (
+                  <div>
+                    <span className="font-semibold text-charcoal-900">Username:</span>{' '}
+                    <span className="text-gold-700 font-semibold">@{currentUser.telegramUsername}</span>
+                  </div>
+                )}
+                <p className="text-[11px] text-charcoal-500 pt-1">
+                  Your account is actively configured to receive scheduled follow-up alerts, overdue warnings, and morning sales digests.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
                 <Button
-                  variant="gold"
-                  size="md"
-                  onClick={handleGenerateTelegramToken}
-                  isLoading={generatingToken}
-                  className="font-bold"
+                  variant="primary"
+                  size="sm"
+                  onClick={handleSendTestTelegram}
+                  isLoading={sendingTestTelegram}
                 >
-                  <Send className="w-4 h-4" />
-                  <span>Generate Telegram Linking Code</span>
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Send Test Alert</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleUnlinkTelegram}
+                  isLoading={unlinkingTelegram}
+                  className="text-rose-600 hover:bg-rose-50 border-rose-200"
+                >
+                  Unlink
                 </Button>
               </div>
-            ) : (
-              <div className="p-5 rounded-xl bg-charcoal-50 border border-charcoal-200 space-y-4">
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4 pt-1">
+            {/* Method A: Bot Code / Deep Link */}
+            <div className="p-5 rounded-xl bg-charcoal-50/70 border border-charcoal-200 space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold text-charcoal-900 uppercase tracking-wider">
+                  Option 1: Connect via Official Bot (Instant)
+                </h4>
+                {telegramToken && (
+                  <span className="flex items-center gap-1.5 text-[11px] font-medium text-gold-700 bg-gold-50 px-2 py-0.5 rounded-full border border-gold-200 animate-pulse">
+                    <RefreshCw className="w-3 h-3 animate-spin" /> Auto-detecting connection...
+                  </span>
+                )}
+              </div>
+
+              {!telegramToken ? (
                 <div>
-                  <h4 className="text-xs font-bold text-charcoal-900 uppercase tracking-wider mb-2">
-                    Follow These Steps to Connect
-                  </h4>
+                  <Button
+                    variant="gold"
+                    size="md"
+                    onClick={handleGenerateTelegramToken}
+                    isLoading={generatingToken}
+                    className="font-bold shadow-sm"
+                  >
+                    <Send className="w-4 h-4" />
+                    <span>Generate Telegram Linking Code</span>
+                  </Button>
+                  <p className="text-[11px] text-charcoal-500 mt-2">
+                    Generates a single-use code to link your chat directly with <span className="font-semibold text-charcoal-800">@luxestudio_leadflow_bot</span>.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
                   <ol className="list-decimal list-inside space-y-2 text-xs text-charcoal-700">
                     <li>
                       Open our official bot in Telegram:{' '}
                       <a
-                        href={telegramLinkUrl || '#'}
+                        href={telegramLinkUrl || 'https://t.me/luxestudio_leadflow_bot'}
                         target="_blank"
                         rel="noreferrer"
-                        className="font-semibold text-gold-600 hover:underline inline-flex items-center gap-1"
+                        className="font-bold text-gold-600 hover:underline inline-flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-gold-300"
                       >
-                        Launch Telegram Bot <ExternalLink className="w-3 h-3" />
+                        Launch @luxestudio_leadflow_bot <ExternalLink className="w-3 h-3" />
                       </a>
                     </li>
                     <li>
-                      Or click Start and send this single-use code to the bot:
-                      <div className="mt-1 flex items-center gap-2">
-                        <span className="px-3 py-1.5 rounded-lg bg-white border border-charcoal-300 font-mono text-base font-bold text-charcoal-900 tracking-widest select-all">
+                      Tap <b>Start</b> in Telegram, or simply send this 6-character code into the bot chat:
+                      <div className="mt-1.5 flex items-center gap-2">
+                        <span className="px-3.5 py-1.5 rounded-lg bg-white border-2 border-gold-400 font-mono text-lg font-bold text-charcoal-900 tracking-widest select-all shadow-sm">
                           {telegramToken}
                         </span>
                         <Button
@@ -300,20 +433,62 @@ export default function SettingsPage() {
                         </Button>
                       </div>
                     </li>
-                    <li>Your account will be verified and bound securely within 3 seconds.</li>
+                    <li>
+                      <span className="font-medium text-charcoal-900">That&apos;s it!</span> As soon as you send the code or tap Start, this page will automatically confirm and link your account.
+                    </li>
                   </ol>
                 </div>
+              )}
+            </div>
 
-                {!telegramBotConfigured && (
-                  <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 text-xs text-amber-800">
-                    <p className="font-semibold">Note on Bot Configuration:</p>
-                    <p>
-                      TELEGRAM_BOT_TOKEN is currently empty in .env. Once you create a bot via @BotFather and add your token, real messages will be delivered directly to your device!
-                    </p>
-                  </div>
-                )}
+            {/* Method B: Direct Chat ID Entry */}
+            <div className="p-4 rounded-xl bg-white border border-charcoal-200 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-xs font-bold text-charcoal-900 uppercase tracking-wider">
+                    Option 2: Direct Telegram Chat ID
+                  </h4>
+                  <p className="text-[11px] text-charcoal-500 mt-0.5">
+                    Already know your Telegram Chat ID? Enter it below to link immediately. (Or message <span className="font-semibold text-charcoal-700">@luxestudio_leadflow_bot</span> to view your ID).
+                  </p>
+                </div>
               </div>
-            )}
+
+              {directLinkSuccess && (
+                <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                  <span>{directLinkSuccess}</span>
+                </div>
+              )}
+
+              {directLinkError && (
+                <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                  <span>{directLinkError}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleDirectLinkChatId} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="e.g. 123456789"
+                  value={directChatId}
+                  onChange={(e) => setDirectChatId(e.target.value)}
+                  className="flex-1 border border-charcoal-300 rounded-lg px-3 py-2 text-xs font-mono text-charcoal-900 placeholder:text-charcoal-400 focus:outline-none focus:ring-1 focus:ring-gold-500"
+                />
+                <Button
+                  type="submit"
+                  variant="outline"
+                  size="sm"
+                  isLoading={linkingDirect}
+                  disabled={!directChatId.trim()}
+                  className="font-medium shrink-0"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Connect Chat ID</span>
+                </Button>
+              </form>
+            </div>
           </div>
         )}
       </div>

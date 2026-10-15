@@ -6,7 +6,7 @@ export async function POST() {
   try {
     const session = await requireAuth();
     const token = await generateTelegramLinkingToken(session.user.id);
-    const botUsername = process.env.TELEGRAM_BOT_USERNAME || 'LuxeStudioLeadFlowBot';
+    const botUsername = process.env.TELEGRAM_BOT_USERNAME || 'luxestudio_leadflow_bot';
 
     return NextResponse.json({
       success: true,

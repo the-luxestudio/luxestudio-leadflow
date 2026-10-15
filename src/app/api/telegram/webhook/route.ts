@@ -14,41 +14,22 @@ export async function POST(request: Request) {
     const text = update.message.text.trim();
     const username = update.message.from?.username || update.message.from?.first_name || '';
 
-    // Handle /start command with potential linking token
-    if (text.startsWith('/start')) {
-      const parts = text.split(' ');
-      const token = parts[1]?.trim();
-
-      if (token) {
-        // Attempt linking with token
-        const linkResult = await linkTelegramAccount(token, chatId, username);
-        if (linkResult.success) {
-          await sendTelegramMessage(
-            chatId,
-            `🎉 <b>Account Linked Successfully!</b>\n\n` +
-            `Welcome, <b>${linkResult.user?.displayName}</b>.\n` +
-            `Your Telegram account is now connected to <b>LuxeStudio LeadFlow CRM</b>.\n\n` +
-            `You will now receive high-priority follow-up reminders, overdue alerts, and daily sales summaries directly here.`
-          );
-        } else {
-          await sendTelegramMessage(
-            chatId,
-            `⚠️ <b>Linking Failed</b>\n\n` +
-            `${linkResult.error}\n\n` +
-            `Please visit your LeadFlow CRM Settings page to generate a new linking code.`
-          );
-        }
-      } else {
-        await sendTelegramMessage(
-          chatId,
-          `👋 <b>Welcome to LuxeStudio LeadFlow Bot</b>\n\n` +
-          `To link your CRM account, open LeadFlow Settings, click <b>"Link Telegram Account"</b>, and follow the link or copy the single-use token.`
-        );
-      }
+    // 1. Handle /help command
+    if (text === '/help') {
+      await sendTelegramMessage(
+        chatId,
+        `🤖 <b>LuxeStudio LeadFlow Bot Commands</b>\n\n` +
+        `• <code>/start &lt;TOKEN&gt;</code> - Link your LeadFlow account\n` +
+        `• <code>/digest</code> or <code>/today</code> - View today's follow-ups and overdue tasks\n` +
+        `• <code>/status</code> - Check linked account status\n` +
+        `• <code>/help</code> - Show this menu\n\n` +
+        `<i>Your Telegram Chat ID:</i> <code>${chatId}</code>\n` +
+        `<i>Real-time alarms and overdue alerts are sent here automatically.</i>`
+      );
       return NextResponse.json({ ok: true });
     }
 
-    // Handle /status command
+    // 2. Handle /status command
     if (text === '/status') {
       const linkedUser = await prisma.user.findFirst({
         where: { telegramChatId: chatId },
@@ -58,20 +39,25 @@ export async function POST(request: Request) {
         await sendTelegramMessage(
           chatId,
           `✅ <b>Connected Account</b>\n\n` +
-          `User: <b>${linkedUser.displayName}</b>\n` +
-          `Email: ${linkedUser.email}\n` +
-          `Status: Active`
+          `• <b>User:</b> ${linkedUser.displayName}\n` +
+          `• <b>Email:</b> ${linkedUser.email}\n` +
+          `• <b>Chat ID:</b> <code>${chatId}</code>\n` +
+          `• <b>Status:</b> Active & receiving follow-up alerts\n\n` +
+          `Type <code>/digest</code> to see today's agenda.`
         );
       } else {
         await sendTelegramMessage(
           chatId,
-          `⚠️ No LeadFlow account is currently linked to this chat. Use /start <token> to link.`
+          `⚠️ <b>Not Connected</b>\n\n` +
+          `No LeadFlow account is currently linked to this chat.\n` +
+          `• <b>Your Chat ID:</b> <code>${chatId}</code>\n\n` +
+          `To connect, send your 6-character linking code from <a href="https://leads.theluxestudio.in/settings">LeadFlow Settings</a>, or paste your Chat ID directly in LeadFlow Settings.`
         );
       }
       return NextResponse.json({ ok: true });
     }
 
-    // Handle /digest, /today, or /summary command
+    // 3. Handle /digest, /today, or /summary command
     if (text === '/digest' || text === '/today' || text === '/summary') {
       const linkedUser = await prisma.user.findFirst({
         where: { telegramChatId: chatId },
@@ -80,7 +66,10 @@ export async function POST(request: Request) {
       if (!linkedUser) {
         await sendTelegramMessage(
           chatId,
-          `⚠️ No LeadFlow account is currently linked. Use <code>/start &lt;TOKEN&gt;</code> to link your account.`
+          `⚠️ <b>Not Connected</b>\n\n` +
+          `Please link your LeadFlow account first.\n` +
+          `• <b>Your Chat ID:</b> <code>${chatId}</code>\n\n` +
+          `Send your 6-character code from Settings or paste your Chat ID in Settings.`
         );
         return NextResponse.json({ ok: true });
       }
@@ -137,29 +126,113 @@ export async function POST(request: Request) {
         }
       }
 
-      msg += `🔗 <a href="${appUrl}/follow-ups">Open Follow-up Centre</a>`;
+      msg += `\n🔗 <a href="${appUrl}/follow-ups">Open Follow-up Centre</a>`;
 
       await sendTelegramMessage(chatId, msg);
       return NextResponse.json({ ok: true });
     }
 
-    // Handle /help command
-    if (text === '/help') {
+    // 4. Extract potential linking token:
+    // Handles:
+    //   - "/start 70F968"
+    //   - "/link 70F968"
+    //   - "70F968" (plain code)
+    //   - "code 70F968"
+    //   - Any 6-char alphanumeric string
+    let candidateToken: string | null = null;
+
+    if (text.startsWith('/start') || text.startsWith('/link') || text.startsWith('/connect')) {
+      const parts = text.split(/\s+/);
+      if (parts.length > 1 && parts[1]?.trim()) {
+        candidateToken = parts[1].trim();
+      }
+    } else {
+      const clean = text.replace(/[^a-zA-Z0-9]/g, '');
+      if (clean.length === 6) {
+        candidateToken = clean;
+      } else {
+        const hexMatch = text.match(/\b([a-zA-Z0-9]{6})\b/);
+        if (hexMatch) {
+          candidateToken = hexMatch[1];
+        }
+      }
+    }
+
+    if (candidateToken) {
+      const linkResult = await linkTelegramAccount(candidateToken, chatId, username);
+      if (linkResult.success) {
+        await sendTelegramMessage(
+          chatId,
+          `🎉 <b>Account Linked Successfully!</b>\n\n` +
+          `Welcome, <b>${linkResult.user?.displayName}</b>.\n` +
+          `Your Telegram is now securely connected to <b>LuxeStudio LeadFlow CRM</b>.\n\n` +
+          `⚡ <b>What happens now:</b>\n` +
+          `• You will receive real-time alerts whenever a follow-up is due\n` +
+          `• Overdue warnings & lead assignments\n` +
+          `• Type <code>/digest</code> anytime to view today's tasks\n\n` +
+          `Type <code>/help</code> for all commands.`
+        );
+      } else {
+        await sendTelegramMessage(
+          chatId,
+          `⚠️ <b>Linking Token Expired or Invalid</b>\n\n` +
+          `${linkResult.error}\n\n` +
+          `• <b>Your Telegram Chat ID:</b> <code>${chatId}</code>\n\n` +
+          `<i>Tip:</i> You can also paste your Chat ID <code>${chatId}</code> directly into <a href="https://leads.theluxestudio.in/settings">LeadFlow Settings</a> to connect instantly without a token!`
+        );
+      }
+      return NextResponse.json({ ok: true });
+    }
+
+    // 5. If user sent bare "/start" with no token
+    if (text === '/start') {
+      const linkedUser = await prisma.user.findFirst({
+        where: { telegramChatId: chatId },
+      });
+
+      if (linkedUser) {
+        await sendTelegramMessage(
+          chatId,
+          `👋 <b>Welcome back, ${linkedUser.displayName}!</b>\n\n` +
+          `Your Telegram account is connected to LuxeStudio LeadFlow CRM.\n` +
+          `Type <code>/digest</code> to see your schedule or <code>/help</code> for commands.`
+        );
+      } else {
+        await sendTelegramMessage(
+          chatId,
+          `👋 <b>Welcome to LuxeStudio LeadFlow Bot</b>\n\n` +
+          `To connect your CRM account, you have two simple options:\n\n` +
+          `1️⃣ <b>Send Code:</b> Generate a 6-character code in <a href="https://leads.theluxestudio.in/settings">LeadFlow Settings</a> and reply with it here.\n\n` +
+          `2️⃣ <b>Direct Chat ID:</b> Copy your Chat ID below and paste it into LeadFlow Settings:\n` +
+          `👉 <code>${chatId}</code>`
+        );
+      }
+      return NextResponse.json({ ok: true });
+    }
+
+    // 6. Any other message from an unlinked user
+    const existingUser = await prisma.user.findFirst({
+      where: { telegramChatId: chatId },
+    });
+
+    if (!existingUser) {
       await sendTelegramMessage(
         chatId,
-        `🤖 <b>LuxeStudio LeadFlow Bot Commands</b>\n\n` +
-        `• <code>/start &lt;TOKEN&gt;</code> - Link your personal Telegram account\n` +
-        `• <code>/digest</code> or <code>/today</code> - View today's follow-ups and overdue tasks\n` +
-        `• <code>/status</code> - Check linked account details\n` +
-        `• <code>/help</code> - Show this command list\n\n` +
-        `<i>Real-time alerts for newly assigned leads and scheduled follow-ups are automatically sent here.</i>`
+        `👋 <b>LuxeStudio LeadFlow Bot</b>\n\n` +
+        `Your Telegram account is not linked to LeadFlow yet.\n\n` +
+        `• <b>Your Chat ID:</b> <code>${chatId}</code>\n\n` +
+        `Reply with your 6-character linking code, or paste your Chat ID into <a href="https://leads.theluxestudio.in/settings">LeadFlow Settings</a> to connect.`
       );
-      return NextResponse.json({ ok: true });
+    } else {
+      await sendTelegramMessage(
+        chatId,
+        `🤖 Hi <b>${existingUser.displayName}</b>! Type <code>/digest</code> to view today's tasks or <code>/help</code> for available commands.`
+      );
     }
 
     return NextResponse.json({ ok: true });
   } catch (err: any) {
     console.error('Telegram webhook error:', err);
-    return NextResponse.json({ ok: true }); // Always return 200 OK to Telegram to avoid retries
+    return NextResponse.json({ ok: true });
   }
 }

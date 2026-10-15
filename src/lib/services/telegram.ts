@@ -12,7 +12,7 @@ export function isTelegramConfigured(): boolean {
  */
 export async function generateTelegramLinkingToken(userId: string): Promise<string> {
   const token = crypto.randomBytes(3).toString('hex').toUpperCase(); // e.g. '8F2B1A'
-  const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
   await prisma.user.update({
     where: { id: userId },
@@ -47,7 +47,7 @@ export async function linkTelegramAccount(token: string, chatId: string, usernam
     await tx.user.update({
       where: { id: user.id },
       data: {
-        telegramChatId: chatId.toString(),
+        telegramChatId: chatId.toString().trim(),
         telegramUsername: username || null,
         linkingToken: null,
         linkingTokenExpiresAt: null,
@@ -66,7 +66,7 @@ export async function linkTelegramAccount(token: string, chatId: string, usernam
           },
         },
         update: {
-          externalAccountId: chatId.toString(),
+          externalAccountId: chatId.toString().trim(),
           status: 'ACTIVE',
           linkedAt: new Date(),
         },
@@ -74,7 +74,60 @@ export async function linkTelegramAccount(token: string, chatId: string, usernam
           organizationId: orgId,
           userId: user.id,
           provider: 'TELEGRAM',
-          externalAccountId: chatId.toString(),
+          externalAccountId: chatId.toString().trim(),
+          status: 'ACTIVE',
+        },
+      });
+    }
+  });
+
+  return { success: true, user };
+}
+
+/**
+ * Directly links a Telegram chatId to an authenticated user
+ */
+export async function directLinkTelegramAccount(userId: string, chatId: string, username?: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { memberships: true },
+  });
+
+  if (!user) {
+    return { success: false, error: 'User not found' };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: user.id },
+      data: {
+        telegramChatId: chatId.toString().trim(),
+        telegramUsername: username?.trim() || null,
+        linkingToken: null,
+        linkingTokenExpiresAt: null,
+      },
+    });
+
+    const orgId = user.memberships[0]?.organizationId;
+    if (orgId) {
+      await tx.userIntegration.upsert({
+        where: {
+          organizationId_userId_provider: {
+            organizationId: orgId,
+            userId: user.id,
+            provider: 'TELEGRAM',
+          },
+        },
+        update: {
+          externalAccountId: chatId.toString().trim(),
+          status: 'ACTIVE',
+          linkedAt: new Date(),
+        },
+        create: {
+          organizationId: orgId,
+          userId: user.id,
+          provider: 'TELEGRAM',
+          externalAccountId: chatId.toString().trim(),
           status: 'ACTIVE',
         },
       });
