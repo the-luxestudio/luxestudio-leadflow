@@ -91,7 +91,7 @@ export async function getDailyBriefingData(organizationId?: string): Promise<Dai
       id: f.id,
       leadId: f.lead.id,
       businessName: f.lead.businessName,
-      category: f.lead.category || 'Lead',
+      category: f.lead.category || 'Client',
       contactName: contact?.name || 'Primary Contact',
       phone: contact?.phone || '',
       actionType: f.actionType,
@@ -154,7 +154,8 @@ export async function getDailyBriefingData(organizationId?: string): Promise<Dai
     const dealValue = s.leads.reduce((sum, l) => sum + (l.dealValue || 0), 0);
     activeLeadsCount += count;
     activePipelineValue += dealValue;
-    prototypesCount += s.leads.filter((l) => Boolean(l.prototypeUrl)).length;
+    const isProtoStage = s.name.toLowerCase().includes('prototype');
+    prototypesCount += s.leads.filter((l) => Boolean(l.prototypeUrl) || isProtoStage).length;
 
     return {
       name: s.name,
@@ -184,196 +185,282 @@ export function buildDailyBriefingHtml(data: DailyBriefingData): string {
 
   const cleanPhone = (phone: string) => phone.replace(/[^0-9]/g, '');
 
-  const reachOutRowsHtml = todaysFollowUps.length > 0
-    ? todaysFollowUps.map((f, i) => {
+  // Render each lead as an independent, fully-responsive Card (No columns to squish!)
+  const reachOutCardsHtml = todaysFollowUps.length > 0
+    ? todaysFollowUps.map((f) => {
         const rawPhone = cleanPhone(f.phone);
         const waLink = rawPhone ? `https://wa.me/${rawPhone}` : null;
         const callLink = rawPhone ? `tel:+${rawPhone}` : null;
         const leadLink = `${appUrl}/leads/${f.leadId}`;
 
-        const actionBadgeBg = f.actionType === 'CALL' ? '#EFF6FF' : f.actionType === 'WHATSAPP' ? '#ECFDF5' : '#FDF4FF';
-        const actionBadgeColor = f.actionType === 'CALL' ? '#1D4ED8' : f.actionType === 'WHATSAPP' ? '#047857' : '#9333EA';
+        const isCall = f.actionType === 'CALL';
+        const isWhatsApp = f.actionType === 'WHATSAPP';
+
+        const actionBadgeBg = isCall ? '#1E3A8A' : isWhatsApp ? '#065F46' : '#581C87';
+        const actionBadgeColor = isCall ? '#93C5FD' : isWhatsApp ? '#6EE7B7' : '#E9D5FF';
+        const actionIcon = isCall ? '📞 Phone Call' : isWhatsApp ? '💬 WhatsApp' : `📌 ${f.actionType}`;
 
         return `
-          <tr style="border-bottom: 1px solid #23283A; ${i % 2 === 1 ? 'background-color: #121520;' : 'background-color: #161A26;'}">
-            <td style="padding: 12px 14px; font-weight: 600; color: #C5A84D; font-size: 13px; white-space: nowrap; vertical-align: top;">
-              ⏰ ${f.scheduledTime}
-            </td>
-            <td style="padding: 12px 14px; vertical-align: top;">
-              <div style="font-weight: 700; color: #FFFFFF; font-size: 14px; margin-bottom: 2px;">
-                <a href="${leadLink}" style="color: #FFFFFF; text-decoration: none;">${f.businessName}</a>
+          <div style="background-color: #141724; border: 1px solid #23283D; border-radius: 12px; padding: 16px; margin-bottom: 14px;">
+            
+            <!-- Card Header: Time Badge + Action Badge + Deal Value -->
+            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 10px;">
+              <tr>
+                <td align="left" style="vertical-align: middle;">
+                  <span style="display: inline-block; padding: 4px 10px; background-color: rgba(197, 168, 77, 0.15); border: 1px solid rgba(197, 168, 77, 0.35); border-radius: 6px; font-size: 12px; font-weight: 700; color: #C5A84D;">
+                    ⏰ ${f.scheduledTime}
+                  </span>
+                </td>
+                <td align="right" style="vertical-align: middle;">
+                  <span style="display: inline-block; padding: 4px 10px; font-size: 11px; font-weight: 700; border-radius: 6px; background-color: ${actionBadgeBg}; color: ${actionBadgeColor}; margin-left: 6px;">
+                    ${actionIcon}
+                  </span>
+                  ${f.dealValue ? `
+                    <span style="display: inline-block; padding: 4px 9px; font-size: 11px; font-weight: 700; border-radius: 6px; background-color: rgba(16, 185, 129, 0.15); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.3); margin-left: 6px;">
+                      ₹${f.dealValue.toLocaleString('en-IN')}
+                    </span>
+                  ` : ''}
+                </td>
+              </tr>
+            </table>
+
+            <!-- Prospect Title -->
+            <div style="font-size: 16px; font-weight: 800; color: #FFFFFF; line-height: 1.3; margin-bottom: 4px;">
+              <a href="${leadLink}" style="color: #FFFFFF; text-decoration: none;">${f.businessName}</a>
+            </div>
+
+            <!-- Contact & Phone line -->
+            <div style="font-size: 13px; color: #94A3B8; margin-bottom: 12px; line-height: 1.4;">
+              👤 <strong style="color: #E2E8F0;">${f.contactName}</strong> 
+              ${f.phone ? ` • <a href="${callLink}" style="color: #38BDF8; text-decoration: none; font-weight: 600;">${f.phone}</a>` : ''}
+              ${f.category ? ` <span style="color: #64748B;">(${f.category})</span>` : ''}
+            </div>
+
+            <!-- Notes / Strategy context box (Full-width, highly readable on mobile) -->
+            ${f.notes ? `
+              <div style="background-color: #1B2030; border-left: 3px solid #C5A84D; border-radius: 6px; padding: 10px 14px; margin-bottom: 14px; font-size: 12px; color: #E2E8F0; line-height: 1.5;">
+                <span style="color: #C5A84D; font-weight: 700;">Note:</span> ${f.notes}
               </div>
-              <div style="font-size: 12px; color: #94A3B8; margin-bottom: 4px;">
-                👤 ${f.contactName} ${f.phone ? `• <a href="${callLink}" style="color: #38BDF8; text-decoration: none;">${f.phone}</a>` : ''}
-              </div>
-              ${f.notes ? `<div style="font-size: 11px; color: #E2E8F0; background: #1E2333; padding: 4px 8px; border-radius: 4px; display: inline-block; margin-top: 2px; border-left: 2px solid #C5A84D;">📝 ${f.notes}</div>` : ''}
-            </td>
-            <td style="padding: 12px 14px; vertical-align: top; white-space: nowrap;">
-              <span style="display: inline-block; padding: 3px 8px; font-size: 11px; font-weight: 700; border-radius: 4px; background: ${actionBadgeBg}; color: ${actionBadgeColor};">
-                ${f.actionType}
-              </span>
-              ${f.dealValue ? `<div style="font-size: 11px; color: #C5A84D; font-weight: 600; margin-top: 4px;">₹${f.dealValue.toLocaleString('en-IN')}</div>` : ''}
-            </td>
-            <td style="padding: 12px 14px; text-align: right; vertical-align: middle; white-space: nowrap;">
-              ${waLink ? `<a href="${waLink}" style="display: inline-block; padding: 6px 10px; background: #10B981; color: #FFFFFF; text-decoration: none; border-radius: 6px; font-size: 11px; font-weight: 700; margin-right: 4px;">WhatsApp</a>` : ''}
-              ${callLink ? `<a href="${callLink}" style="display: inline-block; padding: 6px 10px; background: #3B82F6; color: #FFFFFF; text-decoration: none; border-radius: 6px; font-size: 11px; font-weight: 700; margin-right: 4px;">Call</a>` : ''}
-              <a href="${leadLink}" style="display: inline-block; padding: 6px 10px; background: #2A3042; color: #E2E8F0; text-decoration: none; border-radius: 6px; font-size: 11px; font-weight: 600;">View</a>
-            </td>
-          </tr>
+            ` : ''}
+
+            <!-- Action Buttons: Large touch-friendly buttons spanning the card -->
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                ${waLink ? `
+                  <td width="${callLink ? '35%' : '50%'}" style="padding-right: 6px;">
+                    <a href="${waLink}" style="display: block; text-align: center; padding: 10px 0; background-color: #10B981; color: #FFFFFF; text-decoration: none; border-radius: 8px; font-size: 12px; font-weight: 700;">
+                      WhatsApp
+                    </a>
+                  </td>
+                ` : ''}
+                ${callLink ? `
+                  <td width="${waLink ? '35%' : '50%'}" style="padding-right: 6px;">
+                    <a href="${callLink}" style="display: block; text-align: center; padding: 10px 0; background-color: #2563EB; color: #FFFFFF; text-decoration: none; border-radius: 8px; font-size: 12px; font-weight: 700;">
+                      Call Client
+                    </a>
+                  </td>
+                ` : ''}
+                <td width="${(waLink && callLink) ? '30%' : '50%'}">
+                  <a href="${leadLink}" style="display: block; text-align: center; padding: 10px 0; background-color: #242A3D; border: 1px solid #353D57; color: #F1F5F9; text-decoration: none; border-radius: 8px; font-size: 12px; font-weight: 600;">
+                    Open Lead →
+                  </a>
+                </td>
+              </tr>
+            </table>
+
+          </div>
         `;
       }).join('')
     : `
-      <tr>
-        <td colspan="4" style="padding: 24px; text-align: center; color: #94A3B8; font-size: 13px;">
-          🎉 No scheduled reach-outs due for today. All follow-ups are clear!
-        </td>
-      </tr>
+      <div style="background-color: #141724; border: 1px solid #23283D; border-radius: 12px; padding: 24px; text-align: center; color: #94A3B8; font-size: 13px;">
+        🎉 No scheduled reach-outs due for today. All follow-ups are clear!
+      </div>
     `;
 
-  const stagesHtml = stages.map((s) => `
-    <div style="flex: 1; min-width: 100px; background: #161A26; border: 1px solid #23283A; border-radius: 8px; padding: 10px 12px; margin: 4px;">
-      <div style="font-size: 11px; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">${s.name}</div>
-      <div style="font-size: 18px; font-weight: 800; color: #FFFFFF;">${s.count}</div>
-      ${s.dealValue > 0 ? `<div style="font-size: 11px; color: #C5A84D; font-weight: 600;">₹${s.dealValue.toLocaleString('en-IN')}</div>` : ''}
-    </div>
-  `).join('');
+  // Pipeline stage cards (2 columns on mobile for spacious layout)
+  const stageCardsHtml = `
+    <table width="100%" cellpadding="0" cellspacing="0">
+      ${stages.map((s, idx) => {
+        if (idx % 2 === 0) {
+          const next = stages[idx + 1];
+          return `
+            <tr>
+              <td width="50%" style="padding: 0 4px 8px 0; vertical-align: top;">
+                <div style="background-color: #141724; border: 1px solid #23283D; border-radius: 8px; padding: 10px 12px;">
+                  <div style="font-size: 11px; color: #94A3B8; text-transform: uppercase; font-weight: 600; margin-bottom: 2px;">${s.name}</div>
+                  <div style="font-size: 18px; font-weight: 800; color: #FFFFFF;">${s.count}</div>
+                  ${s.dealValue > 0 ? `<div style="font-size: 11px; color: #C5A84D; font-weight: 600;">₹${s.dealValue.toLocaleString('en-IN')}</div>` : ''}
+                </div>
+              </td>
+              ${next ? `
+                <td width="50%" style="padding: 0 0 8px 4px; vertical-align: top;">
+                  <div style="background-color: #141724; border: 1px solid #23283D; border-radius: 8px; padding: 10px 12px;">
+                    <div style="font-size: 11px; color: #94A3B8; text-transform: uppercase; font-weight: 600; margin-bottom: 2px;">${next.name}</div>
+                    <div style="font-size: 18px; font-weight: 800; color: #FFFFFF;">${next.count}</div>
+                    ${next.dealValue > 0 ? `<div style="font-size: 11px; color: #C5A84D; font-weight: 600;">₹${next.dealValue.toLocaleString('en-IN')}</div>` : ''}
+                  </div>
+                </td>
+              ` : '<td width="50%"></td>'}
+            </tr>
+          `;
+        }
+        return '';
+      }).join('')}
+    </table>
+  `;
 
   const upcomingListHtml = upcomingFollowUps.map((u) => `
-    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #161A26; border-radius: 6px; margin-bottom: 6px; border: 1px solid #23283A; font-size: 12px;">
-      <div>
-        <span style="color: #FFFFFF; font-weight: 600;">${u.businessName}</span>
-        <span style="color: #64748B; margin-left: 6px;">(${u.actionType})</span>
-      </div>
-      <span style="color: #C5A84D; font-weight: 700; font-size: 11px;">📅 ${u.dueDateFormatted}</span>
+    <div style="padding: 10px 12px; background-color: #141724; border-radius: 8px; margin-bottom: 8px; border: 1px solid #23283D;">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td align="left" style="font-size: 13px; font-weight: 600; color: #FFFFFF;">
+            ${u.businessName} <span style="font-size: 11px; color: #94A3B8; font-weight: normal;">(${u.actionType})</span>
+          </td>
+          <td align="right" style="font-size: 11px; font-weight: 700; color: #C5A84D; white-space: nowrap;">
+            📅 ${u.dueDateFormatted}
+          </td>
+        </tr>
+      </table>
     </div>
   `).join('');
 
   return `
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>LuxeStudio LeadFlow 9:00 AM Daily Briefing</title>
+      <style>
+        body { margin: 0; padding: 0; background-color: #0B0D12; -webkit-font-smoothing: antialiased; }
+        @media only screen and (max-width: 600px) {
+          .wrapper { padding: 12px 8px !important; }
+          .header-title { font-size: 20px !important; }
+        }
+      </style>
     </head>
     <body style="margin: 0; padding: 0; background-color: #0B0D12; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #E2E8F0; line-height: 1.5;">
       
-      <div style="max-width: 680px; margin: 0 auto; padding: 24px 16px;">
+      <div class="wrapper" style="max-width: 600px; width: 100%; margin: 0 auto; padding: 20px 12px; box-sizing: border-box;">
         
-        <!-- Header -->
-        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 20px;">
-          <tr>
-            <td>
-              <div style="display: inline-block; padding: 4px 10px; background: rgba(197, 168, 77, 0.15); border: 1px solid rgba(197, 168, 77, 0.4); border-radius: 20px; font-size: 11px; font-weight: 800; color: #C5A84D; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;">
-                ✦ LUXESTUDIO LEADFLOW
-              </div>
-              <h1 style="margin: 0; font-size: 22px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.5px;">
-                Daily 9:00 AM Sales Briefing
-              </h1>
-              <div style="font-size: 13px; color: #94A3B8; margin-top: 4px;">
-                ${dateFormatted} • Asia/Kolkata
-              </div>
-            </td>
-            <td align="right" style="vertical-align: top;">
-              <a href="${appUrl}" style="display: inline-block; padding: 8px 14px; background: #C5A84D; color: #0B0D12; text-decoration: none; border-radius: 8px; font-size: 12px; font-weight: 700;">
-                Open CRM →
-              </a>
-            </td>
-          </tr>
-        </table>
-
-        <!-- Metric KPI Banner -->
-        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px; border-collapse: separate; border-spacing: 8px 0;">
-          <tr>
-            <td width="25%" style="background: #161A26; border: 1px solid #23283A; border-radius: 10px; padding: 14px; text-align: center;">
-              <div style="font-size: 11px; color: #94A3B8; text-transform: uppercase; font-weight: 600;">Reach-Outs Today</div>
-              <div style="font-size: 24px; font-weight: 800; color: #F59E0B; margin-top: 4px;">${stats.reachOutsCount}</div>
-            </td>
-            <td width="25%" style="background: #161A26; border: 1px solid #23283A; border-radius: 10px; padding: 14px; text-align: center;">
-              <div style="font-size: 11px; color: #94A3B8; text-transform: uppercase; font-weight: 600;">Active Pipeline</div>
-              <div style="font-size: 20px; font-weight: 800; color: #10B981; margin-top: 4px;">₹${(stats.activePipelineValue / 1000).toFixed(1)}k</div>
-            </td>
-            <td width="25%" style="background: #161A26; border: 1px solid #23283A; border-radius: 10px; padding: 14px; text-align: center;">
-              <div style="font-size: 11px; color: #94A3B8; text-transform: uppercase; font-weight: 600;">Active Leads</div>
-              <div style="font-size: 24px; font-weight: 800; color: #38BDF8; margin-top: 4px;">${stats.activeLeadsCount}</div>
-            </td>
-            <td width="25%" style="background: #161A26; border: 1px solid #23283A; border-radius: 10px; padding: 14px; text-align: center;">
-              <div style="font-size: 11px; color: #94A3B8; text-transform: uppercase; font-weight: 600;">Prototypes Sent</div>
-              <div style="font-size: 24px; font-weight: 800; color: #A855F7; margin-top: 4px;">${stats.prototypesCount}</div>
-            </td>
-          </tr>
-        </table>
-
-        <!-- Section: Whom to Reach Out Today -->
-        <div style="background: #161A26; border: 1px solid #23283A; border-radius: 12px; overflow: hidden; margin-bottom: 24px;">
-          <div style="padding: 14px 16px; background: #1A1F2E; border-bottom: 1px solid #23283A; display: flex; justify-content: space-between; align-items: center;">
-            <div style="font-weight: 700; color: #FFFFFF; font-size: 14px; display: flex; align-items: center; gap: 6px;">
-              🎯 Whom to Reach Out Today (${todaysFollowUps.length})
-            </div>
-            <a href="${appUrl}/follow-ups" style="font-size: 11px; color: #C5A84D; text-decoration: none; font-weight: 600;">
-              View Follow-Up Centre →
-            </a>
+        <!-- Luxury Brand Header -->
+        <div style="text-align: center; margin-bottom: 20px; padding: 16px 0 8px 0;">
+          <div style="display: inline-block; padding: 4px 12px; background-color: rgba(197, 168, 77, 0.15); border: 1px solid rgba(197, 168, 77, 0.4); border-radius: 20px; font-size: 11px; font-weight: 800; color: #C5A84D; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 10px;">
+            ✦ LUXESTUDIO LEADFLOW
           </div>
+          <h1 class="header-title" style="margin: 0 0 4px 0; font-size: 24px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.5px;">
+            Daily 9:00 AM Sales Briefing
+          </h1>
+          <div style="font-size: 13px; color: #94A3B8; margin-bottom: 16px;">
+            📅 ${dateFormatted}
+          </div>
+          <a href="${appUrl}" style="display: inline-block; padding: 10px 22px; background-color: #C5A84D; color: #0B0D12; text-decoration: none; border-radius: 8px; font-size: 13px; font-weight: 800; letter-spacing: 0.3px;">
+            Open LeadFlow CRM →
+          </a>
+        </div>
 
-          <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
-            <thead>
-              <tr style="background: #141722; border-bottom: 1px solid #23283A; font-size: 11px; color: #94A3B8; text-transform: uppercase;">
-                <th style="padding: 10px 14px; text-align: left;">Scheduled</th>
-                <th style="padding: 10px 14px; text-align: left;">Prospect & Contact</th>
-                <th style="padding: 10px 14px; text-align: left;">Action / Deal</th>
-                <th style="padding: 10px 14px; text-align: right;">Quick Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${reachOutRowsHtml}
-            </tbody>
-          </table>
+        <!-- 2x2 Mobile-Optimized KPI Metric Cards -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 22px;">
+          <tr>
+            <td width="50%" style="padding: 0 4px 8px 0;">
+              <div style="background-color: #141724; border: 1px solid #23283D; border-radius: 10px; padding: 14px 10px; text-align: center;">
+                <div style="font-size: 11px; font-weight: 700; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px;">Reach-Outs Today</div>
+                <div style="font-size: 26px; font-weight: 800; color: #F59E0B; margin-top: 3px;">${stats.reachOutsCount}</div>
+                <div style="font-size: 10px; color: #64748B;">Scheduled Calls & Chats</div>
+              </div>
+            </td>
+            <td width="50%" style="padding: 0 0 8px 4px;">
+              <div style="background-color: #141724; border: 1px solid #23283D; border-radius: 10px; padding: 14px 10px; text-align: center;">
+                <div style="font-size: 11px; font-weight: 700; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px;">Active Pipeline</div>
+                <div style="font-size: 26px; font-weight: 800; color: #10B981; margin-top: 3px;">₹${(stats.activePipelineValue / 1000).toFixed(1)}k</div>
+                <div style="font-size: 10px; color: #64748B;">Total Pipeline Valuation</div>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td width="50%" style="padding: 0 4px 0 0;">
+              <div style="background-color: #141724; border: 1px solid #23283D; border-radius: 10px; padding: 14px 10px; text-align: center;">
+                <div style="font-size: 11px; font-weight: 700; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px;">Active Leads</div>
+                <div style="font-size: 26px; font-weight: 800; color: #38BDF8; margin-top: 3px;">${stats.activeLeadsCount}</div>
+                <div style="font-size: 10px; color: #64748B;">In Sales Funnel</div>
+              </div>
+            </td>
+            <td width="50%" style="padding: 0 0 0 4px;">
+              <div style="background-color: #141724; border: 1px solid #23283D; border-radius: 10px; padding: 14px 10px; text-align: center;">
+                <div style="font-size: 11px; font-weight: 700; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px;">Prototypes in Play</div>
+                <div style="font-size: 26px; font-weight: 800; color: #A855F7; margin-top: 3px;">${stats.prototypesCount}</div>
+                <div style="font-size: 10px; color: #64748B;">Interactive Demos Shared</div>
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Section: Whom to Reach Out Today Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 0 2px;">
+          <h2 style="margin: 0; font-size: 16px; font-weight: 800; color: #FFFFFF;">
+            🎯 Whom to Reach Out Today (${todaysFollowUps.length})
+          </h2>
+          <a href="${appUrl}/follow-ups" style="font-size: 12px; color: #C5A84D; font-weight: 700; text-decoration: none;">
+            Follow-Up Centre →
+          </a>
+        </div>
+
+        <!-- Rendered Mobile-Friendly Cards List -->
+        <div style="margin-bottom: 24px;">
+          ${reachOutCardsHtml}
         </div>
 
         <!-- Section: Pipeline Breakdown -->
-        <div style="background: #161A26; border: 1px solid #23283A; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
-          <div style="font-weight: 700; color: #FFFFFF; font-size: 14px; margin-bottom: 12px; display: flex; justify-content: space-between;">
-            <span>📊 Pipeline Stage Overview</span>
-            <a href="${appUrl}/pipeline" style="font-size: 11px; color: #C5A84D; text-decoration: none; font-weight: 600;">
-              Open Kanban Board →
+        <div style="margin-bottom: 24px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 0 2px;">
+            <h2 style="margin: 0; font-size: 15px; font-weight: 800; color: #FFFFFF;">
+              📊 Pipeline Stage Overview
+            </h2>
+            <a href="${appUrl}/pipeline" style="font-size: 12px; color: #C5A84D; font-weight: 700; text-decoration: none;">
+              Kanban Board →
             </a>
           </div>
-          <div style="display: flex; flex-wrap: wrap; margin: -4px;">
-            ${stagesHtml}
-          </div>
+          ${stageCardsHtml}
         </div>
 
         <!-- Section: Upcoming This Week & Month -->
         ${upcomingFollowUps.length > 0 ? `
-          <div style="background: #161A26; border: 1px solid #23283A; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
-            <div style="font-weight: 700; color: #FFFFFF; font-size: 14px; margin-bottom: 10px;">
+          <div style="margin-bottom: 24px;">
+            <h2 style="margin: 0 0 10px 0; font-size: 15px; font-weight: 800; color: #FFFFFF; padding: 0 2px;">
               📅 Upcoming Follow-ups (Later This Week & Month)
-            </div>
-            <div>
-              ${upcomingListHtml}
-            </div>
+            </h2>
+            ${upcomingListHtml}
           </div>
         ` : ''}
 
-        <!-- Quick Access Navigation -->
-        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 28px;">
-          <tr>
-            <td align="center">
-              <a href="${appUrl}/leads" style="display: inline-block; padding: 10px 18px; margin: 0 4px; background: #222736; border: 1px solid #2D3448; color: #FFFFFF; text-decoration: none; border-radius: 8px; font-size: 12px; font-weight: 600;">
-                📁 All Leads (${stats.activeLeadsCount})
-              </a>
-              <a href="${appUrl}/pipeline" style="display: inline-block; padding: 10px 18px; margin: 0 4px; background: #222736; border: 1px solid #2D3448; color: #FFFFFF; text-decoration: none; border-radius: 8px; font-size: 12px; font-weight: 600;">
-                📊 Pipeline Board
-              </a>
-              <a href="${appUrl}/follow-ups" style="display: inline-block; padding: 10px 18px; margin: 0 4px; background: #222736; border: 1px solid #2D3448; color: #FFFFFF; text-decoration: none; border-radius: 8px; font-size: 12px; font-weight: 600;">
-                ⚡ Follow-Up Centre
-              </a>
-            </td>
-          </tr>
-        </table>
+        <!-- Quick Access Navigation Buttons -->
+        <div style="background-color: #141724; border: 1px solid #23283D; border-radius: 12px; padding: 14px; margin-bottom: 24px; text-align: center;">
+          <div style="font-size: 12px; color: #94A3B8; margin-bottom: 10px; font-weight: 600;">
+            ⚡ Quick Workspace Access
+          </div>
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td width="33%" style="padding-right: 4px;">
+                <a href="${appUrl}/leads" style="display: block; text-align: center; padding: 9px 0; background-color: #1E2333; border: 1px solid #2E364F; color: #FFFFFF; text-decoration: none; border-radius: 6px; font-size: 11px; font-weight: 700;">
+                  📁 All Leads
+                </a>
+              </td>
+              <td width="33%" style="padding: 0 2px;">
+                <a href="${appUrl}/pipeline" style="display: block; text-align: center; padding: 9px 0; background-color: #1E2333; border: 1px solid #2E364F; color: #FFFFFF; text-decoration: none; border-radius: 6px; font-size: 11px; font-weight: 700;">
+                  📊 Pipeline
+                </a>
+              </td>
+              <td width="33%" style="padding-left: 4px;">
+                <a href="${appUrl}/follow-ups" style="display: block; text-align: center; padding: 9px 0; background-color: #1E2333; border: 1px solid #2E364F; color: #FFFFFF; text-decoration: none; border-radius: 6px; font-size: 11px; font-weight: 700;">
+                  ⏰ Follow-Ups
+                </a>
+              </td>
+            </tr>
+          </table>
+        </div>
 
         <!-- Footer -->
-        <div style="text-align: center; border-top: 1px solid #1E2333; padding-top: 16px; font-size: 11px; color: #64748B;">
+        <div style="text-align: center; border-top: 1px solid #1E2333; padding-top: 16px; font-size: 11px; color: #64748B; line-height: 1.5;">
           <p style="margin: 0 0 4px 0;">
             LuxeStudio LeadFlow • Automated 9:00 AM IST Executive Daily Briefing
           </p>
