@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { linkTelegramAccount, sendTelegramMessage } from '@/lib/services/telegram';
+import { getTimezoneDayBounds } from '@/lib/utils/timezone';
 import prisma from '@/lib/db/prisma';
 
 export async function POST(request: Request) {
@@ -75,8 +76,7 @@ export async function POST(request: Request) {
       }
 
       const now = new Date();
-      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      const { startOfToday, endOfToday } = getTimezoneDayBounds('Asia/Kolkata', now);
 
       const [dueToday, overdue] = await Promise.all([
         prisma.followUp.findMany({

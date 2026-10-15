@@ -1,5 +1,6 @@
 import prisma from '@/lib/db/prisma';
 import { assertLeadAccess, getLeadFilterForSession, UserSession } from '@/lib/auth/guard';
+import { getTimezoneDayBounds } from '@/lib/utils/timezone';
 
 export type FollowUpTab = 'today' | 'upcoming' | 'overdue' | 'completed' | 'all';
 
@@ -9,8 +10,8 @@ export async function listFollowUps(
 ) {
   const baseFilter = getLeadFilterForSession(session);
   const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+  const tz = session.organization.timezone || process.env.NEXT_PUBLIC_DEFAULT_TIMEZONE || 'Asia/Kolkata';
+  const { startOfToday, endOfToday } = getTimezoneDayBounds(tz, now);
 
   const where: any = {
     organizationId: session.organization.id,

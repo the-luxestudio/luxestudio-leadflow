@@ -1,11 +1,12 @@
 import prisma from '@/lib/db/prisma';
 import { getLeadFilterForSession, UserSession } from '@/lib/auth/guard';
+import { getTimezoneDayBounds } from '@/lib/utils/timezone';
 
 export async function getDashboardMetrics(session: UserSession) {
   const baseFilter = getLeadFilterForSession(session);
   const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+  const tz = session.organization.timezone || process.env.NEXT_PUBLIC_DEFAULT_TIMEZONE || 'Asia/Kolkata';
+  const { startOfToday, endOfToday } = getTimezoneDayBounds(tz, now);
   const startOfWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
   const leadWhere: any = {
@@ -32,6 +33,7 @@ export async function getDashboardMetrics(session: UserSession) {
     leadsCreatedThisWeek,
     followUpsDueToday,
     overdueFollowUps,
+    todayFollowUps,
     stages,
     allLeadsInScope,
     recentActivities,
@@ -49,7 +51,7 @@ export async function getDashboardMetrics(session: UserSession) {
       },
     }),
 
-    // Follow-ups due today
+    // Follow-ups due today (Timezone aware)
     prisma.followUp.count({
       where: {
         ...followUpWhere,
@@ -58,12 +60,39 @@ export async function getDashboardMetrics(session: UserSession) {
       },
     }),
 
-    // Overdue follow-ups
+    // Overdue follow-ups (Timezone aware)
     prisma.followUp.count({
       where: {
         ...followUpWhere,
         status: 'SCHEDULED',
         dueAt: { lt: startOfToday },
+      },
+    }),
+
+    // Top follow-ups due today for quick dashboard action
+    prisma.followUp.findMany({
+      where: {
+        ...followUpWhere,
+        status: 'SCHEDULED',
+        dueAt: { gte: startOfToday, lte: endOfToday },
+      },
+      orderBy: { dueAt: 'asc' },
+      take: 15,
+      include: {
+        lead: {
+          select: {
+            id: true,
+            businessName: true,
+            category: true,
+            city: true,
+            dealValue: true,
+            contacts: {
+              where: { isPrimary: true },
+              take: 1,
+              select: { name: true, phone: true, whatsappPhone: true },
+            },
+          },
+        },
       },
     }),
 
@@ -173,6 +202,7 @@ export async function getDashboardMetrics(session: UserSession) {
       wonDealsCount: wonDeals.length,
       leadsWithNoNextActionCount,
     },
+    todayFollowUps,
     stageBreakdown,
     sourceBreakdown,
     recentActivities,

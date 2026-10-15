@@ -1,6 +1,7 @@
 import prisma from '@/lib/db/prisma';
 import { assertLeadAccess, getLeadFilterForSession, UserSession } from '@/lib/auth/guard';
 import { sendEmailNotification, isEmailConfigured, getDefaultNotificationRecipients } from '@/lib/services/email';
+import { getTimezoneDayBounds } from '@/lib/utils/timezone';
 
 export interface LeadFilterOptions {
   search?: string;
@@ -75,10 +76,10 @@ export async function listLeads(
     ];
   }
 
-  // Follow-up status filtering
+  // Follow-up status filtering (Timezone aware)
   const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+  const tz = session.organization.timezone || process.env.NEXT_PUBLIC_DEFAULT_TIMEZONE || 'Asia/Kolkata';
+  const { startOfToday, endOfToday } = getTimezoneDayBounds(tz, now);
 
   if (followUpStatus === 'due_today') {
     where.followUps = {

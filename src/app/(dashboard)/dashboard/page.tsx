@@ -17,6 +17,7 @@ import {
   AlertTriangle,
   ChevronRight,
   Sparkles,
+  MessageSquare,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -160,7 +161,7 @@ export default function DashboardPage() {
     );
   }
 
-  const { overview, stageBreakdown, recentActivities } = data;
+  const { overview, stageBreakdown, recentActivities, todayFollowUps = [] } = data;
 
   return (
     <div className="space-y-6">
@@ -235,12 +236,22 @@ export default function DashboardPage() {
         <div className="bg-white p-5 rounded-xl border border-charcoal-200 shadow-subtle card-interactive">
           <div className="flex items-center justify-between text-charcoal-500">
             <span className="text-xs font-medium uppercase tracking-wider">Follow-ups Today</span>
-            <div className="p-2 rounded-lg bg-amber-50 text-amber-600">
+            <div
+              className={`p-2 rounded-lg ${
+                overview.followUpsDueToday > 0 ? 'bg-amber-100 text-amber-700' : 'bg-amber-50 text-amber-600'
+              }`}
+            >
               <CalendarCheck className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-charcoal-900">{overview.followUpsDueToday}</span>
+            <span
+              className={`text-2xl font-bold ${
+                overview.followUpsDueToday > 0 ? 'text-amber-700' : 'text-charcoal-900'
+              }`}
+            >
+              {overview.followUpsDueToday}
+            </span>
             <span className="text-xs text-charcoal-500">scheduled for today</span>
           </div>
           <Link
@@ -400,60 +411,176 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Recent Activity Timeline */}
-      <div className="bg-white p-5 rounded-xl border border-charcoal-200 shadow-subtle">
-        <div className="flex items-center justify-between mb-4">
+      {/* 2-Column Grid: Today's Action Agenda & Recent CRM Activities */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Today's Priority Follow-ups */}
+        <div className="bg-white p-5 rounded-xl border border-charcoal-200 shadow-subtle flex flex-col justify-between">
           <div>
-            <h3 className="text-sm font-bold text-charcoal-900">Recent CRM Activities</h3>
-            <p className="text-xs text-charcoal-500">Calls logged, meetings held, and stage changes</p>
-          </div>
-        </div>
-
-        {recentActivities.length === 0 ? (
-          <p className="text-xs text-charcoal-500 py-4 text-center">No recent activities logged yet.</p>
-        ) : (
-          <div className="divide-y divide-charcoal-100">
-            {recentActivities.map((act: any) => (
-              <div key={act.id} className="py-3 flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-lg bg-charcoal-100 text-charcoal-700 mt-0.5">
-                    {act.type === 'CALL' ? (
-                      <PhoneCall className="w-3.5 h-3.5" />
-                    ) : act.type === 'STAGE_CHANGE' ? (
-                      <TrendingUp className="w-3.5 h-3.5 text-gold-600" />
-                    ) : (
-                      <FileText className="w-3.5 h-3.5" />
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-charcoal-900">{act.summary}</p>
-                    <p className="text-[11px] text-charcoal-500">
-                      Lead:{' '}
-                      <Link
-                        href={`/leads/${act.lead.id}`}
-                        className="font-medium text-charcoal-700 hover:text-gold-600 hover:underline"
-                      >
-                        {act.lead.businessName}
-                      </Link>{' '}
-                      • By <span className="font-medium">{act.actor?.displayName || 'System'}</span>
-                    </p>
-                    {act.details && (
-                      <p className="text-xs text-charcoal-600 mt-0.5 italic">{act.details}</p>
-                    )}
-                  </div>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-charcoal-900">Today&apos;s Follow-up Agenda</h3>
+                  {overview.followUpsDueToday > 0 && (
+                    <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                      {overview.followUpsDueToday} Due Today
+                    </span>
+                  )}
                 </div>
-                <span className="text-[10px] text-charcoal-400 whitespace-nowrap">
-                  {new Date(act.occurredAt).toLocaleDateString('en-IN', {
-                    month: 'short',
-                    day: 'numeric',
+                <p className="text-xs text-charcoal-500 mt-0.5">Calls, messages, and scheduled meetings for today</p>
+              </div>
+              <Link href="/follow-ups?tab=today">
+                <Button variant="outline" size="sm" className="text-xs">
+                  <span>View All</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </Button>
+              </Link>
+            </div>
+
+            {todayFollowUps.length === 0 ? (
+              <div className="py-8 text-center bg-charcoal-50/50 rounded-lg border border-charcoal-100">
+                <CalendarCheck className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+                <p className="text-xs font-semibold text-charcoal-800">All caught up for today!</p>
+                <p className="text-[11px] text-charcoal-500 mt-0.5">No pending follow-ups due today.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-charcoal-100 max-h-[420px] overflow-y-auto pr-1">
+                {todayFollowUps.map((item: any) => {
+                  const contact = item.lead.contacts[0];
+                  const timeStr = new Date(item.dueAt).toLocaleTimeString('en-IN', {
+                    timeZone: 'Asia/Kolkata',
                     hour: '2-digit',
                     minute: '2-digit',
-                  })}
-                </span>
+                    hour12: true,
+                  });
+                  return (
+                    <div key={item.id} className="py-2.5 flex items-center justify-between gap-3 hover:bg-charcoal-50/60 px-2 rounded-lg transition-colors">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`p-2 rounded-lg shrink-0 ${
+                          item.actionType === 'WHATSAPP'
+                            ? 'bg-emerald-50 text-emerald-600'
+                            : item.actionType === 'CALL'
+                            ? 'bg-sky-50 text-sky-600'
+                            : 'bg-gold-50 text-gold-600'
+                        }`}>
+                          {item.actionType === 'WHATSAPP' ? (
+                            <MessageSquare className="w-3.5 h-3.5" />
+                          ) : (
+                            <PhoneCall className="w-3.5 h-3.5" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <Link
+                              href={`/leads/${item.lead.id}`}
+                              className="text-xs font-bold text-charcoal-900 hover:text-gold-600 truncate hover:underline"
+                            >
+                              {item.lead.businessName}
+                            </Link>
+                            {item.lead.dealValue && (
+                              <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-charcoal-100 text-charcoal-700">
+                                ₹{item.lead.dealValue.toLocaleString('en-IN')}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-charcoal-500 flex items-center gap-2 mt-0.5">
+                            {contact?.name && <span className="truncate">{contact.name}</span>}
+                            {contact?.phone && (
+                              <a
+                                href={`tel:${contact.phone}`}
+                                className="text-sky-600 hover:underline font-mono"
+                              >
+                                {contact.phone}
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200">
+                          {timeStr}
+                        </span>
+                        <Link href={`/leads/${item.lead.id}`}>
+                          <Button variant="outline" size="sm" className="h-7 px-2 text-[11px]">
+                            View →
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            ))}
+            )}
           </div>
-        )}
+
+          {todayFollowUps.length > 0 && (
+            <div className="pt-3 mt-3 border-t border-charcoal-100 flex items-center justify-between text-xs text-charcoal-500">
+              <span>Showing top {todayFollowUps.length} tasks scheduled for today</span>
+              <Link href="/follow-ups?tab=today" className="font-semibold text-gold-600 hover:underline flex items-center gap-1">
+                Open Follow-up Centre <ArrowUpRight className="w-3 h-3" />
+              </Link>
+            </div>
+          )}
+        </div>
+
+        {/* Recent Activity Timeline */}
+        <div className="bg-white p-5 rounded-xl border border-charcoal-200 shadow-subtle flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-sm font-bold text-charcoal-900">Recent CRM Activities</h3>
+                <p className="text-xs text-charcoal-500 mt-0.5">Calls logged, meetings held, and stage changes</p>
+              </div>
+            </div>
+
+            {recentActivities.length === 0 ? (
+              <p className="text-xs text-charcoal-500 py-4 text-center">No recent activities logged yet.</p>
+            ) : (
+              <div className="divide-y divide-charcoal-100 max-h-[420px] overflow-y-auto pr-1">
+                {recentActivities.map((act: any) => (
+                  <div key={act.id} className="py-2.5 flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="p-2 rounded-lg bg-charcoal-100 text-charcoal-700 mt-0.5 shrink-0">
+                        {act.type === 'CALL' ? (
+                          <PhoneCall className="w-3.5 h-3.5" />
+                        ) : act.type === 'STAGE_CHANGE' ? (
+                          <TrendingUp className="w-3.5 h-3.5 text-gold-600" />
+                        ) : (
+                          <FileText className="w-3.5 h-3.5" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-charcoal-900 truncate">{act.summary}</p>
+                        <p className="text-[11px] text-charcoal-500 truncate">
+                          Lead:{' '}
+                          <Link
+                            href={`/leads/${act.lead.id}`}
+                            className="font-medium text-charcoal-700 hover:text-gold-600 hover:underline"
+                          >
+                            {act.lead.businessName}
+                          </Link>{' '}
+                          • By <span className="font-medium">{act.actor?.displayName || 'System'}</span>
+                        </p>
+                        {act.details && (
+                          <p className="text-xs text-charcoal-600 mt-0.5 italic line-clamp-1">{act.details}</p>
+                        )}
+                      </div>
+                    </div>
+                    <span className="text-[10px] text-charcoal-400 whitespace-nowrap shrink-0">
+                      {new Date(act.occurredAt).toLocaleDateString('en-IN', {
+                        timeZone: 'Asia/Kolkata',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Quick Action: Log Call Modal */}
