@@ -1,5 +1,6 @@
 import prisma from '@/lib/db/prisma';
 import { assertLeadAccess, getLeadFilterForSession, UserSession } from '@/lib/auth/guard';
+import { sendEmailNotification, isEmailConfigured, getDefaultNotificationRecipients } from '@/lib/services/email';
 
 export interface LeadFilterOptions {
   search?: string;
@@ -285,7 +286,7 @@ export async function createLead(
 
   const normalizedPhone = input.phone ? input.phone.replace(/[^0-9]/g, '') : null;
 
-  return prisma.$transaction(async (tx) => {
+  const newLead = await prisma.$transaction(async (tx) => {
     // 1. Create Lead
     const lead = await tx.lead.create({
       data: {
@@ -399,6 +400,45 @@ export async function createLead(
 
     return lead;
   });
+
+  // Asynchronously dispatch new lead notification email
+  if (isEmailConfigured()) {
+    const { to, cc } = getDefaultNotificationRecipients();
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://leads.theluxestudio.in';
+    const leadUrl = `${appUrl}/leads/${newLead.id}`;
+
+    sendEmailNotification({
+      to,
+      cc,
+      subject: `⚜️ New Lead Captured: ${newLead.businessName} (${input.contactName})`,
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #0B0D12; color: #FFFFFF; border-radius: 16px; border: 1px solid #232838; overflow: hidden;">
+          <div style="padding: 28px; background: linear-gradient(135deg, #141824 0%, #0B0D12 100%); border-bottom: 1px solid #232838;">
+            <span style="display: inline-block; padding: 4px 10px; background: rgba(197, 168, 77, 0.15); border: 1px solid rgba(197, 168, 77, 0.3); border-radius: 6px; font-size: 11px; font-weight: bold; color: #E5C365; text-transform: uppercase;">
+              New Lead Alert
+            </span>
+            <h2 style="margin: 12px 0 0; color: #FFFFFF; font-size: 20px;">${newLead.businessName}</h2>
+            <p style="margin: 4px 0 0; color: #9CA3AF; font-size: 13px;">${input.category || 'Luxury Interior / Architecture'} • ${input.city || 'India'}</p>
+          </div>
+          <div style="padding: 24px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <tr><td style="padding: 6px 0; color: #9CA3AF; width: 140px;">Contact Person:</td><td style="padding: 6px 0; color: #FFFFFF; font-weight: 600;">${input.contactName}</td></tr>
+              <tr><td style="padding: 6px 0; color: #9CA3AF;">Phone:</td><td style="padding: 6px 0; color: #FFFFFF;">${input.phone || 'N/A'}</td></tr>
+              <tr><td style="padding: 6px 0; color: #9CA3AF;">Deal Value:</td><td style="padding: 6px 0; color: #E5C365; font-weight: 700;">₹${(input.dealValue || 0).toLocaleString('en-IN')}</td></tr>
+              <tr><td style="padding: 6px 0; color: #9CA3AF;">Priority:</td><td style="padding: 6px 0; color: #FFFFFF;">${input.priority || 'MEDIUM'}</td></tr>
+            </table>
+            <div style="margin-top: 24px;">
+              <a href="${leadUrl}" style="display: inline-block; padding: 10px 22px; background: #C5A84D; color: #0B0D12; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 13px;">
+                View Lead in CRM &rarr;
+              </a>
+            </div>
+          </div>
+        </div>
+      `,
+    }).catch((e) => console.error('Failed to send new lead notification email:', e));
+  }
+
+  return newLead;
 }
 
 export async function updateLead(

@@ -1,10 +1,18 @@
 import nodemailer from 'nodemailer';
 
 export interface EmailOptions {
-  to: string;
+  to: string | string[];
+  cc?: string | string[];
+  bcc?: string | string[];
   subject: string;
   html: string;
   text?: string;
+}
+
+export function getDefaultNotificationRecipients(): { to: string; cc?: string } {
+  const to = process.env.NOTIFICATION_EMAIL_TO || 'hello@theluxestudio.in';
+  const cc = process.env.NOTIFICATION_EMAIL_CC || 'rahulk19022@gmail.com';
+  return { to, cc };
 }
 
 export function isEmailConfigured(): boolean {
@@ -52,6 +60,8 @@ export async function sendEmailNotification(options: EmailOptions): Promise<{ su
       await transporter.sendMail({
         from: fromAddress,
         to: options.to,
+        cc: options.cc,
+        bcc: options.bcc,
         subject: options.subject,
         html: options.html,
         text: options.text || options.html.replace(/<[^>]*>?/gm, ''),

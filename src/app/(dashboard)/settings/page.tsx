@@ -43,6 +43,30 @@ export default function SettingsPage() {
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
 
+  // Email Test state
+  const [sendingTestEmail, setSendingTestEmail] = useState(false);
+  const [emailTestSuccess, setEmailTestSuccess] = useState<string | null>(null);
+  const [emailTestError, setEmailTestError] = useState<string | null>(null);
+
+  const handleSendTestEmail = async () => {
+    setEmailTestSuccess(null);
+    setEmailTestError(null);
+    try {
+      setSendingTestEmail(true);
+      const res = await fetch('/api/email/test', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) {
+        setEmailTestError(data.error || 'Failed to send test email');
+      } else {
+        setEmailTestSuccess(data.message || 'Test email dispatched successfully!');
+      }
+    } catch {
+      setEmailTestError('Network error while requesting test email');
+    } finally {
+      setSendingTestEmail(false);
+    }
+  };
+
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordError(null);
@@ -296,7 +320,7 @@ export default function SettingsPage() {
 
       {/* Section 2: Transactional Email Integration */}
       <div className="bg-white p-6 rounded-xl border border-charcoal-200 shadow-subtle space-y-4">
-        <div className="flex items-start justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-200 text-purple-600 flex items-center justify-center">
               <Mail className="w-5 h-5" />
@@ -304,19 +328,52 @@ export default function SettingsPage() {
             <div>
               <h3 className="text-sm font-bold text-charcoal-900">Transactional Email Provider</h3>
               <p className="text-xs text-charcoal-500 mt-0.5">
-                Amazon SES or SMTP adapter for sending backup notifications and client proposals.
+                Zoho Mail SMTP / Amazon SES adapter for lead alerts and client correspondence.
               </p>
             </div>
           </div>
 
-          <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-charcoal-100 text-charcoal-600 border border-charcoal-200">
-            Unconfigured (Default)
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              Connected (Zoho SMTP)
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSendTestEmail}
+              isLoading={sendingTestEmail}
+            >
+              <Send className="w-3.5 h-3.5 text-purple-600" />
+              <span>Send Test Email</span>
+            </Button>
+          </div>
         </div>
 
-        <p className="text-xs text-charcoal-600">
-          To activate transactional email reminders, configure <code className="font-mono bg-charcoal-100 px-1 py-0.5 rounded">EMAIL_PROVIDER="ses"</code> or <code className="font-mono bg-charcoal-100 px-1 py-0.5 rounded">EMAIL_PROVIDER="smtp"</code> with credentials in your environment file.
-        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-charcoal-50/70 p-3.5 rounded-xl border border-charcoal-200">
+          <div>
+            <span className="text-charcoal-500 block mb-0.5">Primary Recipient (To)</span>
+            <span className="font-semibold text-charcoal-900 font-mono">hello@theluxestudio.in</span>
+          </div>
+          <div>
+            <span className="text-charcoal-500 block mb-0.5">Carbon Copy (CC)</span>
+            <span className="font-semibold text-gold-700 font-mono">rahulk19022@gmail.com</span>
+          </div>
+        </div>
+
+        {emailTestSuccess && (
+          <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 flex items-start gap-2 text-xs text-emerald-800">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+            <span>{emailTestSuccess}</span>
+          </div>
+        )}
+
+        {emailTestError && (
+          <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 flex items-start gap-2 text-xs text-rose-800">
+            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+            <span>{emailTestError}</span>
+          </div>
+        )}
       </div>
 
       {/* Section 3: Background Worker & Cron Testing */}
