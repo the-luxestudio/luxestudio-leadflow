@@ -38,10 +38,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleQuickLogin = (demoEmail: string) => {
-    setEmail(demoEmail);
-    setPassword('Password123!');
-  };
 
   return (
     <div className="min-h-screen bg-[#0B0D12] flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
@@ -128,47 +124,6 @@ export default function LoginPage() {
               <ArrowRight className="w-4 h-4" />
             </Button>
           </form>
-
-          {/* Quick Demo Access Switcher */}
-          <div className="mt-8 pt-6 border-t border-[#232838]">
-            <p className="text-[11px] font-semibold text-charcoal-400 uppercase tracking-wider mb-2.5 text-center">
-              Quick Role Sign-In (Demo Testing)
-            </p>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('admin@theluxestudio.in')}
-                className="p-2 rounded-lg bg-[#181C2A] hover:bg-[#202538] border border-[#2B3145] text-left transition-colors cursor-pointer"
-              >
-                <p className="text-white font-medium text-[11px]">Aditya Sharma</p>
-                <p className="text-[10px] text-gold-400 font-semibold">Admin (Full Access)</p>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('manager@theluxestudio.in')}
-                className="p-2 rounded-lg bg-[#181C2A] hover:bg-[#202538] border border-[#2B3145] text-left transition-colors cursor-pointer"
-              >
-                <p className="text-white font-medium text-[11px]">Pooja Verma</p>
-                <p className="text-[10px] text-sky-400 font-semibold">Manager</p>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('sales1@theluxestudio.in')}
-                className="p-2 rounded-lg bg-[#181C2A] hover:bg-[#202538] border border-[#2B3145] text-left transition-colors cursor-pointer"
-              >
-                <p className="text-white font-medium text-[11px]">Rohan Mehta</p>
-                <p className="text-[10px] text-emerald-400 font-semibold">Sales Rep 1</p>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('sales2@theluxestudio.in')}
-                className="p-2 rounded-lg bg-[#181C2A] hover:bg-[#202538] border border-[#2B3145] text-left transition-colors cursor-pointer"
-              >
-                <p className="text-white font-medium text-[11px]">Ananya Gupta</p>
-                <p className="text-[10px] text-purple-400 font-semibold">Sales Rep 2</p>
-              </button>
-            </div>
-          </div>
 
           <div className="mt-6 flex items-center justify-center gap-1.5 text-[11px] text-charcoal-500">
             <Shield className="w-3.5 h-3.5 text-charcoal-400" />
