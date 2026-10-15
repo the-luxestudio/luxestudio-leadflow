@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { processDueNotificationJobs } from '@/lib/services/worker';
+import { sendDailyBriefingEmail } from '@/lib/services/briefing';
 import { getCurrentSession } from '@/lib/auth/session';
 
 export async function POST(request: Request) {
@@ -14,8 +15,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized cron invocation' }, { status: 401 });
     }
 
-    const results = await processDueNotificationJobs();
-    return NextResponse.json({ success: true, timestamp: new Date().toISOString(), ...results });
+    const { searchParams } = new URL(request.url);
+    const forceBriefing = searchParams.get('forceBriefing') === 'true';
+
+    // 1. Process due follow-up reminders
+    const followUpResults = await processDueNotificationJobs();
+
+    // 2. Process 9 AM Daily Briefing email (idempotent: sends once per day unless forced)
+    const briefingResult = await sendDailyBriefingEmail({ force: forceBriefing });
+
+    return NextResponse.json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      followUps: followUpResults,
+      dailyBriefing: briefingResult,
+    });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

@@ -42,6 +42,10 @@ export default function SettingsPage() {
   const [runningCron, setRunningCron] = useState(false);
   const [cronResult, setCronResult] = useState<any | null>(null);
 
+  // Daily Briefing test
+  const [sendingBriefing, setSendingBriefing] = useState(false);
+  const [briefingResult, setBriefingResult] = useState<any | null>(null);
+
   // Security / Password Change State
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -244,6 +248,20 @@ export default function SettingsPage() {
       setCronResult({ error: err.message });
     } finally {
       setRunningCron(false);
+    }
+  };
+
+  const handleSendDailyBriefing = async () => {
+    setSendingBriefing(true);
+    setBriefingResult(null);
+    try {
+      const res = await fetch('/api/cron/briefing?force=true', { method: 'POST' });
+      const data = await res.json();
+      setBriefingResult(data);
+    } catch (err: any) {
+      setBriefingResult({ error: err.message });
+    } finally {
+      setSendingBriefing(false);
     }
   };
 
@@ -553,39 +571,88 @@ export default function SettingsPage() {
 
       {/* Section 3: Background Worker & Cron Testing */}
       <div className="bg-white p-6 rounded-xl border border-charcoal-200 shadow-subtle space-y-4">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gold-50 border border-gold-200 text-gold-600 flex items-center justify-center">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gold-50 border border-gold-200 text-gold-600 flex items-center justify-center shrink-0">
               <Clock className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-charcoal-900">Scheduled Reminder Worker (Cron)</h3>
+              <h3 className="text-sm font-bold text-charcoal-900 flex items-center gap-2">
+                <span>Scheduled Jobs & Cron Reminders</span>
+                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  Daily 9:00 AM IST
+                </span>
+              </h3>
               <p className="text-xs text-charcoal-500 mt-0.5">
-                Claims due tasks idempotently, runs retries with exponential backoff, and cleans stale jobs.
+                Automated executive email summary with today's reach-out list, pipeline statistics, and due follow-up alerts.
               </p>
             </div>
           </div>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleTriggerCronWorker}
-            isLoading={runningCron}
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            <span>Trigger Worker Run</span>
-          </Button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleTriggerCronWorker}
+              isLoading={runningCron}
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Trigger Follow-Up Worker</span>
+            </Button>
+
+            <Button
+              variant="gold"
+              size="sm"
+              onClick={handleSendDailyBriefing}
+              isLoading={sendingBriefing}
+            >
+              <Mail className="w-3.5 h-3.5" />
+              <span>Send 9 AM Briefing Now</span>
+            </Button>
+          </div>
         </div>
 
-        {cronResult && (
-          <div className="p-4 rounded-xl bg-charcoal-50 border border-charcoal-200 text-xs font-mono space-y-1">
-            <p className="font-bold text-charcoal-900">Worker Run Output:</p>
-            <p>Processed: {cronResult.processed || 0} tasks</p>
-            <p>Sent: {cronResult.sent || 0} notifications</p>
-            <p>Skipped: {cronResult.skipped || 0} (already delivered)</p>
-            <p>Pending / Retrying: {cronResult.failed || 0}</p>
+        {/* Briefing Result Alert */}
+        {briefingResult && (
+          <div className={`p-4 rounded-xl text-xs space-y-1.5 border ${briefingResult.success ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900' : 'bg-rose-50 border-rose-200 text-rose-900'}`}>
+            <div className="flex items-center gap-2 font-bold">
+              {briefingResult.success ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <AlertCircle className="w-4 h-4 text-rose-600" />}
+              <span>{briefingResult.success ? 'Daily Briefing Dispatched!' : 'Failed to Dispatch Briefing'}</span>
+            </div>
+            {briefingResult.success && (
+              <p className="text-[11px] text-emerald-700">
+                Delivered to <strong>{briefingResult.recipient}</strong> with <strong>{briefingResult.reachOutsCount} scheduled reach-outs</strong> for today.
+              </p>
+            )}
+            {briefingResult.error && (
+              <p className="text-[11px] text-rose-700">{briefingResult.error}</p>
+            )}
           </div>
         )}
+
+        {/* Cron Follow-Up Worker Output */}
+        {cronResult && (
+          <div className="p-4 rounded-xl bg-charcoal-50 border border-charcoal-200 text-xs font-mono space-y-1">
+            <p className="font-bold text-charcoal-900">Follow-Up Worker Output:</p>
+            <p>Processed: {cronResult.followUps?.processed ?? cronResult.processed ?? 0} tasks</p>
+            <p>Sent: {cronResult.followUps?.sent ?? cronResult.sent ?? 0} notifications</p>
+            <p>Skipped: {cronResult.followUps?.skipped ?? cronResult.skipped ?? 0} (already delivered)</p>
+            <p>Pending / Retrying: {cronResult.followUps?.failed ?? cronResult.failed ?? 0}</p>
+            {cronResult.dailyBriefing && (
+              <p className="text-emerald-700 font-semibold pt-1">
+                Daily Briefing: {cronResult.dailyBriefing.skipped ? `Skipped (${cronResult.dailyBriefing.reason})` : 'Dispatched'}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Real-time Follow-up Tip */}
+        <div className="p-3 bg-charcoal-50/60 border border-charcoal-200 rounded-lg text-[11px] text-charcoal-600">
+          <span className="font-bold text-charcoal-800">💡 Real-time Throughout-the-day Reminders: </span>
+          <span>
+            Vercel Cron automatically runs the 9:00 AM IST daily briefing. For real-time notifications right when follow-ups are due throughout the day (e.g. 2:30 PM, 4:00 PM), configure a free recurring ping every 10 mins on <code className="bg-charcoal-100 px-1 py-0.5 rounded text-charcoal-800">cron-job.org</code> to <code className="bg-charcoal-100 px-1 py-0.5 rounded text-charcoal-800 font-mono">https://leads.theluxestudio.in/api/cron</code> with header <code className="bg-charcoal-100 px-1 py-0.5 rounded text-charcoal-800 font-mono">x-cron-key: luxestudio-cron-key-leadflow-2026</code>.
+          </span>
+        </div>
       </div>
 
       {/* Section 4: Security & Password */}
