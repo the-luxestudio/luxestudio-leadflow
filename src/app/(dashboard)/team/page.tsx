@@ -207,7 +207,14 @@ export default function TeamManagementPage() {
                   <tr key={m.userId} className="hover:bg-charcoal-50/50 transition-colors">
                     <td className="py-3.5 px-4">
                       <p className="font-bold text-charcoal-900">{m.displayName}</p>
-                      <p className="text-[11px] text-charcoal-500">{m.email}</p>
+                      <div className="flex items-center gap-1.5 text-[11px] text-charcoal-500">
+                        {m.username && (
+                          <span className="font-mono text-gold-700 bg-gold-50 px-1 py-0.2 rounded border border-gold-200/60 font-medium">
+                            @{m.username}
+                          </span>
+                        )}
+                        <span>{m.email}</span>
+                      </div>
                     </td>
 
                     <td className="py-3.5 px-4">

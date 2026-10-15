@@ -2,12 +2,12 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sparkles, Shield, ArrowRight, Lock, Mail, AlertCircle } from 'lucide-react';
+import { Sparkles, Shield, ArrowRight, Lock, User, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +21,7 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ identifier, password }),
       });
 
       const data = await res.json();
@@ -82,16 +82,16 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-charcoal-300 mb-1.5">
-                Work Email
+                Work Email or User ID
               </label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-charcoal-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                <User className="w-4 h-4 text-charcoal-500 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
-                  type="email"
+                  type="text"
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@theluxestudio.in"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  placeholder="rahul2210 or rahul.kushwaha@theluxestudio.in"
                   className="w-full bg-[#181C2A] border border-[#2B3145] rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder:text-charcoal-500 focus:outline-none focus:ring-2 focus:ring-gold-500/30 focus:border-gold-500"
                 />
               </div>

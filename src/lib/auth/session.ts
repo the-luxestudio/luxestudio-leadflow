@@ -44,6 +44,7 @@ export async function getCurrentSession(): Promise<{
   user: {
     id: string;
     email: string;
+    username: string | null;
     displayName: string;
     status: string;
     telegramChatId: string | null;
@@ -94,6 +95,7 @@ export async function getCurrentSession(): Promise<{
     user: {
       id: user.id,
       email: user.email,
+      username: user.username,
       displayName: user.displayName,
       status: user.status,
       telegramChatId: user.telegramChatId,

@@ -34,14 +34,21 @@ export async function POST(request: Request) {
       );
     }
 
-    const { email, password } = await request.json();
+    const body = await request.json();
+    const identifier = (body.identifier || body.email || body.username || '').toLowerCase().trim();
+    const password = body.password;
 
-    if (!email || !password) {
-      return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
+    if (!identifier || !password) {
+      return NextResponse.json({ error: 'Email or User ID and password are required' }, { status: 400 });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase().trim() },
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: identifier },
+          { username: identifier },
+        ],
+      },
       include: {
         memberships: {
           include: { organization: true },
@@ -51,12 +58,12 @@ export async function POST(request: Request) {
     });
 
     if (!user || user.status !== 'ACTIVE') {
-      return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
+      return NextResponse.json({ error: 'Invalid credentials or inactive account' }, { status: 401 });
     }
 
     const isValid = await bcrypt.compare(password, user.passwordHash);
     if (!isValid) {
-      return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
+      return NextResponse.json({ error: 'Invalid credentials or incorrect password' }, { status: 401 });
     }
 
     const membership = user.memberships[0];
@@ -87,6 +94,7 @@ export async function POST(request: Request) {
       user: {
         id: user.id,
         email: user.email,
+        username: user.username,
         displayName: user.displayName,
         role: membership.role,
         organization: {

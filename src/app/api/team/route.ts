@@ -14,6 +14,7 @@ export async function GET() {
           select: {
             id: true,
             email: true,
+            username: true,
             displayName: true,
             status: true,
             telegramChatId: true,
@@ -34,6 +35,7 @@ export async function GET() {
       membershipId: m.id,
       userId: m.user.id,
       email: m.user.email,
+      username: m.user.username,
       displayName: m.user.displayName,
       status: m.user.status,
       role: m.role,
@@ -75,7 +77,7 @@ export async function POST(request: Request) {
     }
 
     // Default: Invite/Create Member
-    const { email, displayName, role, password } = body;
+    const { email, displayName, role, password, username } = body;
     if (!email || !displayName) {
       return NextResponse.json({ error: 'Email and full name are required' }, { status: 400 });
     }
@@ -88,12 +90,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'A user with this email address already exists' }, { status: 400 });
     }
 
+    if (username) {
+      const existingUsername = await prisma.user.findFirst({
+        where: { username: username.toLowerCase().trim() },
+      });
+      if (existingUsername) {
+        return NextResponse.json({ error: 'A user with this username already exists' }, { status: 400 });
+      }
+    }
+
     const passwordHash = await bcrypt.hash(password || 'LuxeStudio2026!', 10);
 
     const newUser = await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
           email: email.toLowerCase().trim(),
+          username: username ? username.toLowerCase().trim() : null,
           displayName: displayName.trim(),
           passwordHash,
           status: 'ACTIVE',

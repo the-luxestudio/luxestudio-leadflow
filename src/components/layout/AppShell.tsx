@@ -10,6 +10,7 @@ interface AppShellProps {
     id: string;
     displayName: string;
     email: string;
+    username?: string | null;
     role: string;
   };
   organization?: {

@@ -19,6 +19,7 @@ interface HeaderProps {
   currentUser?: {
     displayName: string;
     email: string;
+    username?: string | null;
     role: string;
   };
   organization?: {
@@ -125,6 +126,9 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-charcoal-200 py-2 z-50 animate-fade-in">
               <div className="px-4 py-2 border-b border-charcoal-100">
                 <p className="text-xs font-bold text-charcoal-900">{currentUser?.displayName}</p>
+                {currentUser?.username && (
+                  <p className="text-[11px] font-mono text-gold-600 font-medium">@{currentUser.username}</p>
+                )}
                 <p className="text-[11px] text-charcoal-500 truncate">{currentUser?.email}</p>
                 <div className="mt-1.5 inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full bg-gold-50 text-gold-700 border border-gold-200">
                   {currentUser?.role?.replace('_', ' ')}

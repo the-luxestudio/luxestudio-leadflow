@@ -21,6 +21,7 @@ interface SidebarProps {
   currentUser?: {
     displayName: string;
     email: string;
+    username?: string | null;
     role: string;
   };
   isOpen?: boolean;
@@ -135,7 +136,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentUser, isOpen, onClose }
               </p>
               <div className="flex items-center gap-1.5">
                 <span className="text-[10px] text-charcoal-400 truncate">
-                  {currentUser?.role?.replace('_', ' ') || 'SALES REP'}
+                  {currentUser?.username ? `@${currentUser.username}` : (currentUser?.role?.replace('_', ' ') || 'SALES REP')}
                 </span>
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
               </div>

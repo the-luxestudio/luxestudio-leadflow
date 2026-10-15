@@ -19,6 +19,7 @@ export default async function DashboardLayout({
         id: session.user.id,
         displayName: session.user.displayName,
         email: session.user.email,
+        username: session.user.username,
         role: session.role,
       }}
       organization={{
