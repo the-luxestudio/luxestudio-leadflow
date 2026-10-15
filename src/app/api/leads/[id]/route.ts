@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/guard';
-import { getLeadById, updateLead, archiveLead } from '@/lib/services/leads';
+import { getLeadById, updateLead, archiveLead, restoreLead } from '@/lib/services/leads';
 
 export async function GET(
   request: Request,
@@ -27,6 +27,11 @@ export async function PATCH(
   try {
     const session = await requireAuth();
     const body = await request.json();
+
+    if (body.action === 'restore' || body.restore === true) {
+      const restored = await restoreLead(params.id, session);
+      return NextResponse.json({ success: true, lead: restored });
+    }
 
     const updated = await updateLead(params.id, session, body);
     return NextResponse.json({ success: true, lead: updated });

@@ -71,6 +71,92 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true });
     }
 
+    // Handle /digest, /today, or /summary command
+    if (text === '/digest' || text === '/today' || text === '/summary') {
+      const linkedUser = await prisma.user.findFirst({
+        where: { telegramChatId: chatId },
+      });
+
+      if (!linkedUser) {
+        await sendTelegramMessage(
+          chatId,
+          `⚠️ No LeadFlow account is currently linked. Use <code>/start &lt;TOKEN&gt;</code> to link your account.`
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      const now = new Date();
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+      const [dueToday, overdue] = await Promise.all([
+        prisma.followUp.findMany({
+          where: {
+            ownerId: linkedUser.id,
+            status: 'SCHEDULED',
+            dueAt: { gte: startOfToday, lte: endOfToday },
+          },
+          include: { lead: true },
+          orderBy: { dueAt: 'asc' },
+        }),
+        prisma.followUp.findMany({
+          where: {
+            ownerId: linkedUser.id,
+            status: 'SCHEDULED',
+            dueAt: { lt: startOfToday },
+          },
+          include: { lead: true },
+          orderBy: { dueAt: 'asc' },
+        }),
+      ]);
+
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://leads.theluxestudio.in';
+
+      let msg = `📅 <b>LuxeStudio LeadFlow Daily Digest</b>\n`;
+      msg += `👤 Member: <b>${linkedUser.displayName}</b>\n\n`;
+
+      if (dueToday.length === 0 && overdue.length === 0) {
+        msg += `✨ <b>All caught up!</b> No pending follow-ups due today or overdue.\n`;
+      } else {
+        if (overdue.length > 0) {
+          msg += `🚨 <b>Overdue Tasks (${overdue.length}):</b>\n`;
+          for (const item of overdue.slice(0, 5)) {
+            msg += `• <b>${item.lead.businessName}</b>: ${item.actionType} - ${item.title}\n`;
+          }
+          if (overdue.length > 5) msg += `  <i>...and ${overdue.length - 5} more</i>\n`;
+          msg += `\n`;
+        }
+
+        if (dueToday.length > 0) {
+          msg += `📌 <b>Due Today (${dueToday.length}):</b>\n`;
+          for (const item of dueToday.slice(0, 5)) {
+            msg += `• <b>${item.lead.businessName}</b>: ${item.actionType} - ${item.title}\n`;
+          }
+          if (dueToday.length > 5) msg += `  <i>...and ${dueToday.length - 5} more</i>\n`;
+          msg += `\n`;
+        }
+      }
+
+      msg += `🔗 <a href="${appUrl}/follow-ups">Open Follow-up Centre</a>`;
+
+      await sendTelegramMessage(chatId, msg);
+      return NextResponse.json({ ok: true });
+    }
+
+    // Handle /help command
+    if (text === '/help') {
+      await sendTelegramMessage(
+        chatId,
+        `🤖 <b>LuxeStudio LeadFlow Bot Commands</b>\n\n` +
+        `• <code>/start &lt;TOKEN&gt;</code> - Link your personal Telegram account\n` +
+        `• <code>/digest</code> or <code>/today</code> - View today's follow-ups and overdue tasks\n` +
+        `• <code>/status</code> - Check linked account details\n` +
+        `• <code>/help</code> - Show this command list\n\n` +
+        `<i>Real-time alerts for newly assigned leads and scheduled follow-ups are automatically sent here.</i>`
+      );
+      return NextResponse.json({ ok: true });
+    }
+
     return NextResponse.json({ ok: true });
   } catch (err: any) {
     console.error('Telegram webhook error:', err);

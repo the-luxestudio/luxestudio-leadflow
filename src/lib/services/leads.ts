@@ -440,9 +440,36 @@ export async function updateLead(
   }
 
   return prisma.$transaction(async (tx) => {
+    const allowedFields = [
+      'businessName',
+      'category',
+      'websiteUrl',
+      'socialUrl',
+      'address',
+      'city',
+      'state',
+      'country',
+      'mapsUrl',
+      'source',
+      'sourceUrl',
+      'priority',
+      'opportunityType',
+      'prototypeUrl',
+      'proposalUrl',
+      'dealValue',
+      'ownerId',
+      'stageId',
+    ];
+    const sanitizedData: any = {};
+    for (const key of allowedFields) {
+      if ((updates as any)[key] !== undefined) {
+        sanitizedData[key] = (updates as any)[key];
+      }
+    }
+
     const updated = await tx.lead.update({
       where: { id: leadId },
-      data: updates,
+      data: sanitizedData,
     });
 
     // Record activity if owner changed
