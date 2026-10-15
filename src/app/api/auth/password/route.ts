@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import prisma from '@/lib/db/prisma';
 import { requireAuth } from '@/lib/auth/guard';
+import { setSessionCookie } from '@/lib/auth/session';
 
 export async function POST(request: Request) {
   try {
@@ -40,6 +41,13 @@ export async function POST(request: Request) {
     await prisma.user.update({
       where: { id: user.id },
       data: { passwordHash: newHash },
+    });
+
+    // Rotate session token
+    await setSessionCookie({
+      userId: user.id,
+      organizationId: session.organization.id,
+      role: session.role,
     });
 
     // Record audit log

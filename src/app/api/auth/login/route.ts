@@ -58,12 +58,12 @@ export async function POST(request: Request) {
     });
 
     if (!user || user.status !== 'ACTIVE') {
-      return NextResponse.json({ error: 'Invalid credentials or inactive account' }, { status: 401 });
+      return NextResponse.json({ error: 'Invalid email/username or password' }, { status: 401 });
     }
 
     const isValid = await bcrypt.compare(password, user.passwordHash);
     if (!isValid) {
-      return NextResponse.json({ error: 'Invalid credentials or incorrect password' }, { status: 401 });
+      return NextResponse.json({ error: 'Invalid email/username or password' }, { status: 401 });
     }
 
     const membership = user.memberships[0];
