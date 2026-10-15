@@ -1,3 +1,5 @@
+import nodemailer from 'nodemailer';
+
 export interface EmailOptions {
   to: string;
   subject: string;
@@ -10,7 +12,7 @@ export function isEmailConfigured(): boolean {
   if (!provider || provider === 'unconfigured') return false;
 
   if (provider === 'smtp') {
-    return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER);
+    return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
   }
 
   if (provider === 'ses') {
@@ -32,18 +34,39 @@ export async function sendEmailNotification(options: EmailOptions): Promise<{ su
 
   try {
     if (provider === 'smtp') {
-      // In production, nodemailer can be used with SMTP_HOST / SMTP_USER
-      // Here we validate configuration strictly
+      const port = Number(process.env.SMTP_PORT || 465);
+      const isSecure = port === 465;
+
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port,
+        secure: isSecure,
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+      });
+
+      const fromAddress = process.env.EMAIL_FROM || process.env.SMTP_USER || 'LuxeStudio <notifications@theluxestudio.in>';
+
+      await transporter.sendMail({
+        from: fromAddress,
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+        text: options.text || options.html.replace(/<[^>]*>?/gm, ''),
+      });
+
       return { success: true };
     }
 
     if (provider === 'ses') {
-      // AWS SES API integration
       return { success: true };
     }
 
     return { success: false, error: 'Unsupported email provider' };
   } catch (err: any) {
+    console.error('Email delivery error:', err);
     return { success: false, error: err.message || 'Email delivery failed' };
   }
 }
