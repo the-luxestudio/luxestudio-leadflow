@@ -64,8 +64,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentUser, isOpen, onClose }
         {/* Brand Header */}
         <div className="h-16 flex items-center justify-between px-6 border-b border-[#1C202C]">
           <Link href="/dashboard" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-gold-400 to-gold-600 flex items-center justify-center shadow-sm shadow-gold-500/20">
-              <Sparkles className="w-4 h-4 text-charcoal-950 stroke-[2.5]" />
+            <div className="w-9 h-9 rounded-lg overflow-hidden border border-gold-500/30 shadow-md shadow-gold-500/10 flex-shrink-0 bg-black">
+              <img src="/apple-icon.png" alt="LuxeStudio" className="w-full h-full object-cover" />
             </div>
             <div>
               <span className="text-sm font-bold tracking-tight text-white flex items-center gap-1.5">

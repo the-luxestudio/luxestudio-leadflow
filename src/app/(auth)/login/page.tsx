@@ -45,9 +45,9 @@ export default function LoginPage() {
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gold-500/5 rounded-full blur-3xl pointer-events-none" />
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
-        <div className="flex justify-center items-center gap-2.5 mb-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gold-400 to-gold-600 flex items-center justify-center shadow-lg shadow-gold-500/20">
-            <Sparkles className="w-5 h-5 text-charcoal-950 stroke-[2.5]" />
+        <div className="flex justify-center items-center gap-3 mb-4">
+          <div className="w-12 h-12 rounded-xl overflow-hidden border border-gold-500/30 shadow-lg shadow-gold-500/20 flex-shrink-0 bg-black">
+            <img src="/apple-icon.png" alt="LuxeStudio" className="w-full h-full object-cover" />
           </div>
           <div>
             <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
