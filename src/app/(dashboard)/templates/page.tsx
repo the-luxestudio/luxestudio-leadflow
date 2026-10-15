@@ -12,6 +12,8 @@ import {
   FileText,
   RefreshCw,
   Eye,
+  Pencil,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -31,6 +33,21 @@ export default function TemplatesPage() {
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Edit Template Modal
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editCategory, setEditCategory] = useState('OUTREACH');
+  const [editChannel, setEditChannel] = useState('WHATSAPP');
+  const [editSubject, setEditSubject] = useState('');
+  const [editBody, setEditBody] = useState('');
+  const [editing, setEditing] = useState(false);
+
+  // Delete Confirmation Modal
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [templateToDelete, setTemplateToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Preview Modal
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
@@ -135,6 +152,84 @@ export default function TemplatesPage() {
     setBody((prev) => `${prev} {{${tag}}}`);
   };
 
+  const handleOpenEdit = (tmpl: any) => {
+    setEditingTemplateId(tmpl.id);
+    setEditName(tmpl.name);
+    setEditCategory(tmpl.category || 'OUTREACH');
+    setEditChannel(tmpl.channel || 'WHATSAPP');
+    setEditSubject(tmpl.subject || '');
+    setEditBody(tmpl.body || '');
+    setEditModalOpen(true);
+  };
+
+  const handleUpdateTemplate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTemplateId || !editName.trim() || !editBody.trim()) return;
+    setEditing(true);
+
+    try {
+      const res = await fetch(`/api/templates/${editingTemplateId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editName.trim(),
+          category: editCategory,
+          channel: editChannel,
+          subject: editChannel === 'EMAIL' ? editSubject.trim() : null,
+          body: editBody,
+        }),
+      });
+
+      if (res.ok) {
+        setEditModalOpen(false);
+        setEditingTemplateId(null);
+        fetchTemplates();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to update template');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error while updating template');
+    } finally {
+      setEditing(false);
+    }
+  };
+
+  const handleOpenDelete = (tmpl: any) => {
+    setTemplateToDelete({ id: tmpl.id, name: tmpl.name });
+    setDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!templateToDelete) return;
+    setDeleting(true);
+
+    try {
+      const res = await fetch(`/api/templates/${templateToDelete.id}`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        setDeleteModalOpen(false);
+        setTemplateToDelete(null);
+        fetchTemplates();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to delete template');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error while deleting template');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const insertEditVariable = (tag: string) => {
+    setEditBody((prev) => `${prev} {{${tag}}}`);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -215,10 +310,30 @@ export default function TemplatesPage() {
                 </div>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-charcoal-100 flex items-center justify-between">
-                <span className="text-[11px] text-charcoal-400">Ready to personalize</span>
+              <div className="mt-4 pt-3 border-t border-charcoal-100 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleOpenEdit(tmpl)}
+                    className="p-1.5 text-charcoal-400 hover:text-gold-600 hover:bg-gold-50 rounded-lg transition-colors cursor-pointer"
+                    title="Edit template"
+                    aria-label="Edit template"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => handleOpenDelete(tmpl)}
+                    className="p-1.5 text-charcoal-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                    title="Delete template"
+                    aria-label="Delete template"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
                 <Button variant="outline" size="sm" onClick={() => handleOpenPreview(tmpl)}>
-                  <Eye className="w-3.5 h-3.5" /> Preview with Lead
+                  <Eye className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Preview with Lead</span>
+                  <span className="sm:hidden">Preview</span>
                 </Button>
               </div>
             </div>
@@ -395,6 +510,164 @@ export default function TemplatesPage() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Edit Template Modal */}
+      <Modal
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        title="Edit Message Template"
+        description="Update the template parameters, subject, or message body"
+      >
+        <form onSubmit={handleUpdateTemplate} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-charcoal-700 mb-1">Template Name *</label>
+            <input
+              type="text"
+              required
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              placeholder="e.g. Website Demo Walkthrough WhatsApp"
+              className="w-full text-xs border border-charcoal-300 rounded-lg p-2.5 text-charcoal-900"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-charcoal-700 mb-1">Channel</label>
+              <select
+                value={editChannel}
+                onChange={(e) => setEditChannel(e.target.value)}
+                className="w-full text-xs border border-charcoal-300 rounded-lg p-2 bg-white text-charcoal-900"
+              >
+                <option value="WHATSAPP">WhatsApp</option>
+                <option value="EMAIL">Email</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-charcoal-700 mb-1">Category</label>
+              <select
+                value={editCategory}
+                onChange={(e) => setEditCategory(e.target.value)}
+                className="w-full text-xs border border-charcoal-300 rounded-lg p-2 bg-white text-charcoal-900"
+              >
+                <option value="OUTREACH">Initial Outreach</option>
+                <option value="PROTOTYPE">Prototype Sharing</option>
+                <option value="PROPOSAL">Proposal Sharing</option>
+                <option value="FOLLOW_UP">Follow-up</option>
+                <option value="CLOSING">Closing</option>
+              </select>
+            </div>
+          </div>
+
+          {editChannel === 'EMAIL' && (
+            <div>
+              <label className="block text-xs font-semibold text-charcoal-700 mb-1">Email Subject *</label>
+              <input
+                type="text"
+                required={editChannel === 'EMAIL'}
+                value={editSubject}
+                onChange={(e) => setEditSubject(e.target.value)}
+                placeholder="e.g. Website Growth Proposal for {{business_name}}"
+                className="w-full text-xs border border-charcoal-300 rounded-lg p-2 text-charcoal-900"
+              />
+            </div>
+          )}
+
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-semibold text-charcoal-700">Message Body *</label>
+              <div className="flex items-center gap-1 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => insertEditVariable('business_name')}
+                  className="px-1.5 py-0.5 rounded bg-charcoal-100 hover:bg-charcoal-200 text-charcoal-700 cursor-pointer"
+                >
+                  + Business
+                </button>
+                <button
+                  type="button"
+                  onClick={() => insertEditVariable('contact_name')}
+                  className="px-1.5 py-0.5 rounded bg-charcoal-100 hover:bg-charcoal-200 text-charcoal-700 cursor-pointer"
+                >
+                  + Contact
+                </button>
+                <button
+                  type="button"
+                  onClick={() => insertEditVariable('prototype_url')}
+                  className="px-1.5 py-0.5 rounded bg-charcoal-100 hover:bg-charcoal-200 text-charcoal-700 cursor-pointer"
+                >
+                  + Prototype
+                </button>
+                <button
+                  type="button"
+                  onClick={() => insertEditVariable('proposal_url')}
+                  className="px-1.5 py-0.5 rounded bg-charcoal-100 hover:bg-charcoal-200 text-charcoal-700 cursor-pointer"
+                >
+                  + Proposal
+                </button>
+              </div>
+            </div>
+            <textarea
+              required
+              rows={5}
+              value={editBody}
+              onChange={(e) => setEditBody(e.target.value)}
+              placeholder="Hi {{contact_name}}, this is {{sender_name}} from LuxeStudio..."
+              className="w-full text-xs border border-charcoal-300 rounded-lg p-2.5 text-charcoal-900 font-mono"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => setEditModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="gold" size="sm" isLoading={editing}>
+              Save Changes
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={deleteModalOpen}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setTemplateToDelete(null);
+        }}
+        title="Delete Message Template"
+        maxWidth="sm"
+      >
+        <div className="space-y-4">
+          <div className="p-3.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs">
+            Are you sure you want to delete <span className="font-bold">"{templateToDelete?.name}"</span>? This will remove the template from outreach and follow-up quick actions.
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setDeleteModalOpen(false);
+                setTemplateToDelete(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={handleConfirmDelete}
+              isLoading={deleting}
+              className="bg-rose-600 hover:bg-rose-700 text-white font-semibold"
+            >
+              Delete Template
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
