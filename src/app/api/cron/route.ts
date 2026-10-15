@@ -7,7 +7,7 @@ export async function POST(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const cronKey = request.headers.get('x-cron-key') || searchParams.get('key');
-    const expectedSecret = process.env.CRON_SECRET || 'luxestudio-cron-key-leadflow-2026';
+    const expectedSecret = process.env.CRON_SECRET || '3fb3d2512d28fa2ae7c1ad94a56dd2e4f473b6bc5a6b3c48';
 
     const session = await getCurrentSession();
     const isAuthorizedAdmin = session && (session.role === 'ADMIN' || session.role === 'MANAGER');

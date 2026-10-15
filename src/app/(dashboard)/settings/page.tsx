@@ -650,7 +650,7 @@ export default function SettingsPage() {
         <div className="p-3 bg-charcoal-50/60 border border-charcoal-200 rounded-lg text-[11px] text-charcoal-600">
           <span className="font-bold text-charcoal-800">💡 Real-time Throughout-the-day Reminders: </span>
           <span>
-            Vercel Cron automatically runs the 9:00 AM IST daily briefing. For real-time notifications right when follow-ups are due throughout the day (e.g. 2:30 PM, 4:00 PM), configure a free recurring ping every 10 mins on <code className="bg-charcoal-100 px-1 py-0.5 rounded text-charcoal-800">cron-job.org</code> to <code className="bg-charcoal-100 px-1 py-0.5 rounded text-charcoal-800 font-mono">https://leads.theluxestudio.in/api/cron</code> with header <code className="bg-charcoal-100 px-1 py-0.5 rounded text-charcoal-800 font-mono">x-cron-key: luxestudio-cron-key-leadflow-2026</code>.
+            Vercel Cron automatically runs the 9:00 AM IST daily briefing. For real-time notifications right when follow-ups are due throughout the day (e.g. 2:30 PM, 4:00 PM), configure a free recurring ping every 10 mins on <code className="bg-charcoal-100 px-1 py-0.5 rounded text-charcoal-800">cron-job.org</code> to <code className="bg-charcoal-100 px-1 py-0.5 rounded text-charcoal-800 font-mono">https://leads.theluxestudio.in/api/cron</code> with header <code className="bg-charcoal-100 px-1 py-0.5 rounded text-charcoal-800 font-mono">x-cron-key: 3fb3d2512d28fa2ae7c1ad94a56dd2e4f473b6bc5a6b3c48</code>.
           </span>
         </div>
       </div>
