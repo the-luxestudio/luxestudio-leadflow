@@ -3,8 +3,37 @@ import bcrypt from 'bcryptjs';
 import prisma from '@/lib/db/prisma';
 import { setSessionCookie } from '@/lib/auth/session';
 
+// In-memory rate limiting map: ip -> { count, resetTime }
+const loginAttempts = new Map<string, { count: number; resetTime: number }>();
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = loginAttempts.get(ip);
+
+  if (!entry || now > entry.resetTime) {
+    loginAttempts.set(ip, { count: 1, resetTime: now + 60 * 1000 });
+    return true;
+  }
+
+  if (entry.count >= 8) {
+    return false;
+  }
+
+  entry.count += 1;
+  return true;
+}
+
 export async function POST(request: Request) {
   try {
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+
+    if (!checkRateLimit(ip)) {
+      return NextResponse.json(
+        { error: 'Too many login attempts. Please wait 1 minute before trying again.' },
+        { status: 429 }
+      );
+    }
+
     const { email, password } = await request.json();
 
     if (!email || !password) {
@@ -41,6 +70,18 @@ export async function POST(request: Request) {
       role: membership.role as 'ADMIN' | 'MANAGER' | 'SALES_MEMBER',
     });
 
+    // Record login audit log asynchronously
+    prisma.auditLog.create({
+      data: {
+        organizationId: membership.organizationId,
+        actorId: user.id,
+        entityType: 'USER',
+        entityId: user.id,
+        action: 'LOGIN',
+        metadata: JSON.stringify({ ip, userAgent: request.headers.get('user-agent') || 'unknown' }),
+      },
+    }).catch(() => {});
+
     return NextResponse.json({
       success: true,
       user: {
@@ -59,3 +100,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'An unexpected authentication error occurred' }, { status: 500 });
   }
 }
+

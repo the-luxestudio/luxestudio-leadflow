@@ -35,6 +35,51 @@ export default function SettingsPage() {
   const [runningCron, setRunningCron] = useState(false);
   const [cronResult, setCronResult] = useState<any | null>(null);
 
+  // Security / Password Change State
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError(null);
+    setPasswordSuccess(null);
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New passwords do not match');
+      return;
+    }
+    if (newPassword.length < 8) {
+      setPasswordError('New password must be at least 8 characters long');
+      return;
+    }
+
+    try {
+      setChangingPassword(true);
+      const res = await fetch('/api/auth/password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setPasswordError(data.error || 'Failed to update password');
+      } else {
+        setPasswordSuccess('Password successfully updated!');
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      }
+    } catch (err: any) {
+      setPasswordError('Network error while updating password');
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
   useEffect(() => {
     fetchUserData();
   }, []);
@@ -311,7 +356,77 @@ export default function SettingsPage() {
         )}
       </div>
 
-      {/* Section 4: Workspace Defaults */}
+      {/* Section 4: Security & Password */}
+      <div className="bg-white p-6 rounded-xl border border-charcoal-200 shadow-subtle space-y-4">
+        <div className="flex items-center gap-2">
+          <Shield className="w-5 h-5 text-gold-500" />
+          <div>
+            <h3 className="text-sm font-bold text-charcoal-900">Security & Credentials</h3>
+            <p className="text-xs text-charcoal-500">Update your account password</p>
+          </div>
+        </div>
+
+        {passwordSuccess && (
+          <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+            <span>{passwordSuccess}</span>
+          </div>
+        )}
+
+        {passwordError && (
+          <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+            <span>{passwordError}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
+          <div>
+            <label className="text-xs font-medium text-charcoal-700 block mb-1">Current Password</label>
+            <input
+              type="password"
+              required
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              placeholder="••••••••"
+              className="w-full border border-charcoal-200 rounded-lg p-2.5 text-xs text-charcoal-900 focus:outline-none focus:ring-1 focus:ring-gold-500"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-charcoal-700 block mb-1">New Password</label>
+              <input
+                type="password"
+                required
+                minLength={8}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Min 8 characters"
+                className="w-full border border-charcoal-200 rounded-lg p-2.5 text-xs text-charcoal-900 focus:outline-none focus:ring-1 focus:ring-gold-500"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-charcoal-700 block mb-1">Confirm New Password</label>
+              <input
+                type="password"
+                required
+                minLength={8}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm password"
+                className="w-full border border-charcoal-200 rounded-lg p-2.5 text-xs text-charcoal-900 focus:outline-none focus:ring-1 focus:ring-gold-500"
+              />
+            </div>
+          </div>
+
+          <Button type="submit" variant="primary" size="sm" isLoading={changingPassword}>
+            Update Password
+          </Button>
+        </form>
+      </div>
+
+      {/* Section 5: Workspace Defaults */}
       <div className="bg-white p-6 rounded-xl border border-charcoal-200 shadow-subtle space-y-4">
         <h3 className="text-sm font-bold text-charcoal-900">Workspace Details</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
