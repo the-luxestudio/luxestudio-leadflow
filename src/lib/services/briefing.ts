@@ -498,6 +498,25 @@ export async function sendDailyBriefingEmail(options: { force?: boolean } = {}):
 
   const now = new Date();
   const istDateString = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(now);
+  const istHour = parseInt(
+    new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', hour: '2-digit', hour12: false }).format(now),
+    10
+  );
+  const istTimeFormatted = new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  }).format(now);
+
+  // Time guard: only dispatch automatically at or after 9:00 AM IST (unless forced for testing)
+  if (!options.force && istHour < 9) {
+    return {
+      success: true,
+      skipped: true,
+      reason: `Briefing scheduled for 9:00 AM IST (current time: ${istTimeFormatted} IST)`,
+    };
+  }
 
   // Idempotency check: don't send multiple briefings on the same day unless forced
   if (!options.force) {
