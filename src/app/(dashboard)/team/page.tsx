@@ -279,7 +279,7 @@ export default function TeamManagementPage() {
               required
               value={inviteName}
               onChange={(e) => setInviteName(e.target.value)}
-              placeholder="e.g. Rahul Gupta"
+              placeholder="e.g. Sales Executive"
               className="w-full text-xs border border-charcoal-300 rounded-lg p-2.5 text-charcoal-900"
             />
           </div>
@@ -291,7 +291,7 @@ export default function TeamManagementPage() {
               required
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
-              placeholder="rahul@theluxestudio.in"
+              placeholder="colleague@company.com"
               className="w-full text-xs border border-charcoal-300 rounded-lg p-2.5 text-charcoal-900"
             />
           </div>

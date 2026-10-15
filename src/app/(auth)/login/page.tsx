@@ -91,7 +91,7 @@ export default function LoginPage() {
                   required
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
-                  placeholder="rahul2210 or rahul.kushwaha@theluxestudio.in"
+                  placeholder="name@company.com or username"
                   className="w-full bg-[#181C2A] border border-[#2B3145] rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder:text-charcoal-500 focus:outline-none focus:ring-2 focus:ring-gold-500/30 focus:border-gold-500"
                 />
               </div>

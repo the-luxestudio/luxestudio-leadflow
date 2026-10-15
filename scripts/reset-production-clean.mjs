@@ -75,14 +75,14 @@ async function main() {
   console.log('✓ Verified 8 pipeline stages.');
 
   // 4. Create single fresh Admin user
-  const adminEmail = 'nuvobyluxestudio@gmail.com';
-  const rawPassword = 'Password123!';
+  const adminEmail = process.env.ADMIN_EMAIL || 'admin@theluxestudio.in';
+  const rawPassword = process.env.ADMIN_PASSWORD || 'Password123!';
   const passwordHash = await bcrypt.hash(rawPassword, 12);
 
   const admin = await prisma.user.create({
     data: {
       email: adminEmail,
-      displayName: 'LuxeStudio Admin',
+      displayName: 'System Admin',
       passwordHash,
       status: 'ACTIVE',
       memberships: {
