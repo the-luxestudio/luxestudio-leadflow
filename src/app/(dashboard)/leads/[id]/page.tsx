@@ -359,7 +359,7 @@ export default function LeadDetailPage({ params }: { params: { id: string } }) {
             </a>
           )}
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:ml-auto">
             <Button variant="outline" size="sm" onClick={() => setStageModalOpen(true)}>
               <TrendingUp className="w-3.5 h-3.5 text-gold-600" /> Change Stage
             </Button>
@@ -377,10 +377,10 @@ export default function LeadDetailPage({ params }: { params: { id: string } }) {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="border-b border-charcoal-200 flex items-center gap-6 text-xs font-semibold">
+      <div className="border-b border-charcoal-200 flex items-center gap-6 text-xs font-semibold overflow-x-auto no-scrollbar whitespace-nowrap">
         <button
           onClick={() => setActiveTab('overview')}
-          className={`pb-3 border-b-2 transition-all cursor-pointer ${
+          className={`pb-3 border-b-2 transition-all cursor-pointer shrink-0 ${
             activeTab === 'overview'
               ? 'border-gold-500 text-charcoal-900 font-bold'
               : 'border-transparent text-charcoal-500 hover:text-charcoal-800'
@@ -390,7 +390,7 @@ export default function LeadDetailPage({ params }: { params: { id: string } }) {
         </button>
         <button
           onClick={() => setActiveTab('activity')}
-          className={`pb-3 border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
+          className={`pb-3 border-b-2 transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
             activeTab === 'activity'
               ? 'border-gold-500 text-charcoal-900 font-bold'
               : 'border-transparent text-charcoal-500 hover:text-charcoal-800'
@@ -403,7 +403,7 @@ export default function LeadDetailPage({ params }: { params: { id: string } }) {
         </button>
         <button
           onClick={() => setActiveTab('followups')}
-          className={`pb-3 border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
+          className={`pb-3 border-b-2 transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
             activeTab === 'followups'
               ? 'border-gold-500 text-charcoal-900 font-bold'
               : 'border-transparent text-charcoal-500 hover:text-charcoal-800'
@@ -416,7 +416,7 @@ export default function LeadDetailPage({ params }: { params: { id: string } }) {
         </button>
         <button
           onClick={() => setActiveTab('deals')}
-          className={`pb-3 border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
+          className={`pb-3 border-b-2 transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
             activeTab === 'deals'
               ? 'border-gold-500 text-charcoal-900 font-bold'
               : 'border-transparent text-charcoal-500 hover:text-charcoal-800'
@@ -429,7 +429,7 @@ export default function LeadDetailPage({ params }: { params: { id: string } }) {
         </button>
         <button
           onClick={() => setActiveTab('notes')}
-          className={`pb-3 border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
+          className={`pb-3 border-b-2 transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
             activeTab === 'notes'
               ? 'border-gold-500 text-charcoal-900 font-bold'
               : 'border-transparent text-charcoal-500 hover:text-charcoal-800'

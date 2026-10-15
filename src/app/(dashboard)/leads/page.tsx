@@ -507,7 +507,7 @@ export default function LeadsPage() {
           </div>
 
           {/* Pagination */}
-          <div className="px-4 py-3 bg-charcoal-50/50 border-t border-charcoal-200 flex items-center justify-between text-xs text-charcoal-500">
+          <div className="px-4 py-3 bg-charcoal-50/50 border-t border-charcoal-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-charcoal-500">
             <span>
               Showing {leads.length} of {pagination.total} leads
             </span>
@@ -536,100 +536,130 @@ export default function LeadsPage() {
         </div>
       ) : (
         /* Compact Card View */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {leads.map((lead) => {
-            const contact = lead.contacts[0];
-            const followUp = lead.followUps[0];
-            const isOverdue = followUp ? new Date(followUp.dueAt) < new Date() : false;
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {leads.map((lead) => {
+              const contact = lead.contacts[0];
+              const followUp = lead.followUps[0];
+              const isOverdue = followUp ? new Date(followUp.dueAt) < new Date() : false;
 
-            return (
-              <div
-                key={lead.id}
-                className="bg-white p-5 rounded-xl border border-charcoal-200 shadow-subtle hover:shadow-card transition-all flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <span
-                      className="px-2 py-0.5 text-[10px] font-semibold rounded-full border"
-                      style={{
-                        borderColor: `${lead.stage.color || '#C5A84D'}40`,
-                        backgroundColor: `${lead.stage.color || '#C5A84D'}15`,
-                        color: lead.stage.color || '#C5A84D',
-                      }}
-                    >
-                      {lead.stage.name}
-                    </span>
-                    <Badge
-                      variant={lead.priority === 'URGENT' ? 'danger' : lead.priority === 'HIGH' ? 'warning' : 'default'}
-                      size="sm"
-                    >
-                      {lead.priority}
-                    </Badge>
-                  </div>
-
-                  <Link
-                    href={`/leads/${lead.id}`}
-                    className="font-bold text-sm text-charcoal-900 hover:text-gold-600 block transition-colors"
-                  >
-                    {lead.businessName}
-                  </Link>
-
-                  <p className="text-xs text-charcoal-500 mt-0.5">
-                    {lead.category || 'Digital Prospect'} • {lead.city || 'India'}
-                  </p>
-
-                  <div className="mt-4 p-3 bg-charcoal-50 rounded-lg space-y-1.5 text-xs">
-                    <p className="text-charcoal-700">
-                      <span className="font-semibold">Contact:</span> {contact?.name || 'N/A'}
-                    </p>
-                    <p className="text-charcoal-700">
-                      <span className="font-semibold">Phone:</span> {contact?.phone || 'N/A'}
-                    </p>
-                    <p className="text-charcoal-700">
-                      <span className="font-semibold">Deal Value:</span>{' '}
-                      <span className="font-bold text-charcoal-900">
-                        {lead.dealValue ? `₹${lead.dealValue.toLocaleString('en-IN')}` : '—'}
-                      </span>
-                    </p>
-                  </div>
-
-                  {followUp ? (
-                    <div className="mt-3 text-[11px] p-2 rounded bg-amber-50/60 border border-amber-200/60 text-amber-900">
-                      <span className="font-semibold block">Next Follow-up ({followUp.actionType}):</span>
-                      <span>{followUp.title}</span>
-                    </div>
-                  ) : (
-                    <div className="mt-3 text-[11px] p-2 rounded bg-rose-50 border border-rose-200 text-rose-700 font-semibold">
-                      ⚠️ No follow-up scheduled
-                    </div>
-                  )}
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-charcoal-100 flex items-center justify-between">
-                  <span className="text-[11px] text-charcoal-500">
-                    Owner: {lead.owner?.displayName?.split(' ')[0] || 'Unassigned'}
-                  </span>
-                  <div className="flex items-center gap-1">
-                    {contact?.phone && (
-                      <button
-                        onClick={() => openWhatsAppModal(lead)}
-                        className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded"
-                        title="WhatsApp message"
+              return (
+                <div
+                  key={lead.id}
+                  className="bg-white p-5 rounded-xl border border-charcoal-200 shadow-subtle hover:shadow-card transition-all flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <span
+                        className="px-2 py-0.5 text-[10px] font-semibold rounded-full border"
+                        style={{
+                          borderColor: `${lead.stage.color || '#C5A84D'}40`,
+                          backgroundColor: `${lead.stage.color || '#C5A84D'}15`,
+                          color: lead.stage.color || '#C5A84D',
+                        }}
                       >
-                        <MessageCircle className="w-4 h-4" />
-                      </button>
-                    )}
+                        {lead.stage.name}
+                      </span>
+                      <Badge
+                        variant={lead.priority === 'URGENT' ? 'danger' : lead.priority === 'HIGH' ? 'warning' : 'default'}
+                        size="sm"
+                      >
+                        {lead.priority}
+                      </Badge>
+                    </div>
+
                     <Link
                       href={`/leads/${lead.id}`}
-                      className="text-xs font-semibold text-gold-600 hover:text-gold-700 flex items-center gap-1"
+                      className="font-bold text-sm text-charcoal-900 hover:text-gold-600 block transition-colors"
                     >
-                      Details &rarr;
+                      {lead.businessName}
                     </Link>
+
+                    <p className="text-xs text-charcoal-500 mt-0.5">
+                      {lead.category || 'Digital Prospect'} • {lead.city || 'India'}
+                    </p>
+
+                    <div className="mt-4 p-3 bg-charcoal-50 rounded-lg space-y-1.5 text-xs">
+                      <p className="text-charcoal-700">
+                        <span className="font-semibold">Contact:</span> {contact?.name || 'N/A'}
+                      </p>
+                      <p className="text-charcoal-700">
+                        <span className="font-semibold">Phone:</span> {contact?.phone || 'N/A'}
+                      </p>
+                      <p className="text-charcoal-700">
+                        <span className="font-semibold">Deal Value:</span>{' '}
+                        <span className="font-bold text-charcoal-900">
+                          {lead.dealValue ? `₹${lead.dealValue.toLocaleString('en-IN')}` : '—'}
+                        </span>
+                      </p>
+                    </div>
+
+                    {followUp ? (
+                      <div className="mt-3 text-[11px] p-2 rounded bg-amber-50/60 border border-amber-200/60 text-amber-900">
+                        <span className="font-semibold block">Next Follow-up ({followUp.actionType}):</span>
+                        <span>{followUp.title}</span>
+                      </div>
+                    ) : (
+                      <div className="mt-3 text-[11px] p-2 rounded bg-rose-50 border border-rose-200 text-rose-700 font-semibold">
+                        ⚠️ No follow-up scheduled
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-4 pt-3 border-t border-charcoal-100 flex items-center justify-between">
+                    <span className="text-[11px] text-charcoal-500">
+                      Owner: {lead.owner?.displayName?.split(' ')[0] || 'Unassigned'}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      {contact?.phone && (
+                        <button
+                          onClick={() => openWhatsAppModal(lead)}
+                          className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded"
+                          title="WhatsApp message"
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                        </button>
+                      )}
+                      <Link
+                        href={`/leads/${lead.id}`}
+                        className="text-xs font-semibold text-gold-600 hover:text-gold-700 flex items-center gap-1"
+                      >
+                        Details &rarr;
+                      </Link>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+
+          {/* Card View Pagination */}
+          <div className="bg-white px-4 py-3 rounded-xl border border-charcoal-200 shadow-subtle flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-charcoal-500">
+            <span>
+              Showing {leads.length} of {pagination.total} leads
+            </span>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={pagination.page <= 1}
+                onClick={() => setPagination((p) => ({ ...p, page: p.page - 1 }))}
+              >
+                Previous
+              </Button>
+              <span className="px-2 font-medium">
+                Page {pagination.page} of {pagination.totalPages || 1}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={pagination.page >= pagination.totalPages}
+                onClick={() => setPagination((p) => ({ ...p, page: p.page + 1 }))}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 

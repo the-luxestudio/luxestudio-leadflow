@@ -148,33 +148,33 @@ export default function CSVImportExportPage() {
       </div>
 
       {/* Guided Steps Indicator */}
-      <div className="bg-white p-4 rounded-xl border border-charcoal-200 shadow-subtle flex items-center justify-between text-xs font-semibold">
-        <div className={`flex items-center gap-2 ${step >= 1 ? 'text-gold-600' : 'text-charcoal-400'}`}>
-          <span className="w-6 h-6 rounded-full bg-gold-500/10 border border-gold-400/30 flex items-center justify-center text-xs">
+      <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-charcoal-200 shadow-subtle flex items-center justify-between text-xs font-semibold">
+        <div className={`flex items-center gap-1.5 sm:gap-2 shrink-0 ${step >= 1 ? 'text-gold-600 font-bold' : 'text-charcoal-400'}`}>
+          <span className="w-6 h-6 rounded-full bg-gold-500/10 border border-gold-400/30 flex items-center justify-center text-xs shrink-0">
             1
           </span>
-          <span>Upload File</span>
+          <span className="hidden sm:inline">Upload File</span>
         </div>
-        <div className="w-8 h-px bg-charcoal-200" />
-        <div className={`flex items-center gap-2 ${step >= 2 ? 'text-gold-600' : 'text-charcoal-400'}`}>
-          <span className="w-6 h-6 rounded-full bg-gold-500/10 border border-gold-400/30 flex items-center justify-center text-xs">
+        <div className="flex-1 mx-1.5 sm:mx-3 h-px bg-charcoal-200 min-w-[6px]" />
+        <div className={`flex items-center gap-1.5 sm:gap-2 shrink-0 ${step >= 2 ? 'text-gold-600 font-bold' : 'text-charcoal-400'}`}>
+          <span className="w-6 h-6 rounded-full bg-gold-500/10 border border-gold-400/30 flex items-center justify-center text-xs shrink-0">
             2
           </span>
-          <span>Map Fields</span>
+          <span className="hidden sm:inline">Map Fields</span>
         </div>
-        <div className="w-8 h-px bg-charcoal-200" />
-        <div className={`flex items-center gap-2 ${step >= 3 ? 'text-gold-600' : 'text-charcoal-400'}`}>
-          <span className="w-6 h-6 rounded-full bg-gold-500/10 border border-gold-400/30 flex items-center justify-center text-xs">
+        <div className="flex-1 mx-1.5 sm:mx-3 h-px bg-charcoal-200 min-w-[6px]" />
+        <div className={`flex items-center gap-1.5 sm:gap-2 shrink-0 ${step >= 3 ? 'text-gold-600 font-bold' : 'text-charcoal-400'}`}>
+          <span className="w-6 h-6 rounded-full bg-gold-500/10 border border-gold-400/30 flex items-center justify-center text-xs shrink-0">
             3
           </span>
-          <span>Duplicate Settings</span>
+          <span className="hidden sm:inline">Duplicates</span>
         </div>
-        <div className="w-8 h-px bg-charcoal-200" />
-        <div className={`flex items-center gap-2 ${step >= 4 ? 'text-gold-600' : 'text-charcoal-400'}`}>
-          <span className="w-6 h-6 rounded-full bg-gold-500/10 border border-gold-400/30 flex items-center justify-center text-xs">
+        <div className="flex-1 mx-1.5 sm:mx-3 h-px bg-charcoal-200 min-w-[6px]" />
+        <div className={`flex items-center gap-1.5 sm:gap-2 shrink-0 ${step >= 4 ? 'text-gold-600 font-bold' : 'text-charcoal-400'}`}>
+          <span className="w-6 h-6 rounded-full bg-gold-500/10 border border-gold-400/30 flex items-center justify-center text-xs shrink-0">
             4
           </span>
-          <span>Result Summary</span>
+          <span className="hidden sm:inline">Results</span>
         </div>
       </div>
 

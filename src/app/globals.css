@@ -15,13 +15,26 @@
   --gold-border: #dec06b;
 }
 
+html,
 body {
+  max-width: 100vw;
+  overflow-x: hidden;
   color: var(--foreground);
   background: var(--background);
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* Hide scrollbars for clean touch-scrolling */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 
 /* Custom scrollbars for high polish */
 ::-webkit-scrollbar {

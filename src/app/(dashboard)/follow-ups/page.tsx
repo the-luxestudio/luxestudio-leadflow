@@ -186,10 +186,10 @@ export default function FollowUpsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-charcoal-200 gap-6 text-xs font-semibold">
+      <div className="flex border-b border-charcoal-200 gap-6 text-xs font-semibold overflow-x-auto no-scrollbar whitespace-nowrap">
         <button
           onClick={() => setActiveTab('today')}
-          className={`pb-3 border-b-2 transition-all cursor-pointer ${
+          className={`pb-3 border-b-2 transition-all cursor-pointer shrink-0 ${
             activeTab === 'today'
               ? 'border-gold-500 text-charcoal-900 font-bold'
               : 'border-transparent text-charcoal-500 hover:text-charcoal-800'
@@ -199,7 +199,7 @@ export default function FollowUpsPage() {
         </button>
         <button
           onClick={() => setActiveTab('overdue')}
-          className={`pb-3 border-b-2 transition-all cursor-pointer ${
+          className={`pb-3 border-b-2 transition-all cursor-pointer shrink-0 ${
             activeTab === 'overdue'
               ? 'border-rose-500 text-rose-700 font-bold'
               : 'border-transparent text-charcoal-500 hover:text-charcoal-800'
@@ -209,7 +209,7 @@ export default function FollowUpsPage() {
         </button>
         <button
           onClick={() => setActiveTab('upcoming')}
-          className={`pb-3 border-b-2 transition-all cursor-pointer ${
+          className={`pb-3 border-b-2 transition-all cursor-pointer shrink-0 ${
             activeTab === 'upcoming'
               ? 'border-gold-500 text-charcoal-900 font-bold'
               : 'border-transparent text-charcoal-500 hover:text-charcoal-800'
@@ -219,7 +219,7 @@ export default function FollowUpsPage() {
         </button>
         <button
           onClick={() => setActiveTab('completed')}
-          className={`pb-3 border-b-2 transition-all cursor-pointer ${
+          className={`pb-3 border-b-2 transition-all cursor-pointer shrink-0 ${
             activeTab === 'completed'
               ? 'border-emerald-500 text-emerald-800 font-bold'
               : 'border-transparent text-charcoal-500 hover:text-charcoal-800'
