@@ -5,7 +5,8 @@ import { getCurrentSession } from '@/lib/auth/session';
 
 export async function POST(request: Request) {
   try {
-    const cronKey = request.headers.get('x-cron-key');
+    const { searchParams } = new URL(request.url);
+    const cronKey = request.headers.get('x-cron-key') || searchParams.get('key');
     const expectedSecret = process.env.CRON_SECRET || 'luxestudio-cron-key-leadflow-2026';
 
     const session = await getCurrentSession();
@@ -15,7 +16,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized cron invocation' }, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url);
     const forceBriefing = searchParams.get('forceBriefing') === 'true';
 
     // 1. Process due follow-up reminders
